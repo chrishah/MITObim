@@ -1,0 +1,70 @@
+MITObim
+=======
+
+VERSION
+=======
+1.0
+
+Copyright 2012 - Christoph Hahn
+
+CONTACT
+=======
+
+Christoph Hahn <christoph.hahn@nhm.uio.no>
+
+INTRODUCTION
+============
+
+This document contains instructions on how to use the MITObim pipeline described in the manuscript "Reconstructing mitochondrial genomes directly from genomic next generation sequencing reads - a baiting and iterative mapping approach" by Hahn et al., submitted to NAR methods online. The pipeline is at the moment intended to be used with illumina data, but can be readily modified for the use with other platforms data. 
+
+The code in the wrapper script (MITObim.sh) is currently being "polished". The new version will be put in place wihtin the following week. The currently available version (as of 10.10.2012) is however fully functional. All results described in the manuscript were obtained using this version of the script. A test data set will likewise be put online within the next week.
+
+
+PREREQUISITES
+=============
+- GNU utilities
+- A running version of MIRA v3.4 (http://sourceforge.net/projects/mira-assembler/) is required. An excellent guide to MIRA v3.4 is available at http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.html.
+
+
+WALKTHROUGH MITObim
+===================
+
+1. Inititial mapping assembly to (distant) reference using MIRA v3.4:
+
+As part of the iterative baiting and mapping (MITObim) procedure one has to prepare a starting reference. This will be derived from the conserved regions of a (distantly) related mitochondrial genome. Your working directory must contain at least two things: (1) A mitochondrial genome of a (distantly) related species in fasta format (e.g. obtained from Genbank) named MYPROJECT_backbone_in.fasta. (2) Illumina data in fastq format and named MYPROJECT_in_solexa.fastq. 
+Now we want to run a mapping assembly using MIRA 3.4. An example can be found below (This command performs a basic mapping assembly including prior trimming and clipping of your illumina reads): 
+
+-bash-4.1$ mira --project=MYPROJECT --job=mapping,genome,accurate,solexa -MI:somrnl=0 -AS:nop=1 -SB:bft=fasta:bbq=30 SOLEXA_SETTINGS -CO:msr=no -SB:dsn=STRAINname:bsn=REFname
+
+For more detailed information on Solexa mapping assemblies with MIRA 3.4 see http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.html#sect_sxa_mapping_assemblies.
+
+NOTE: This step might require substantial computational resources depending on the size of the illumina readpool (Memory requirements can be estimated using the miramem program shipping with MIRA). This increased memory consumption can be bypassed by limitating the readpool e.g. via an initial in-silico baiting step using mirabait (in-silico baiting program shipping with MIRA). The mapping assembly can then be run as described above using the potentially drastically reduced readpool contained in fishedreads.fastq. While this strategy will impair the sensitivity of the approach, it works reasonable well when a not to distantly related reference is available. The following example will extract all reads from the readpool (rawreads.fastq) that are identical in a sequence of at least 31 continuous bases to a bait (bait.fasta, in this case your mitochondrial reference genome) into a file (fishedreads).
+
+-bash-4.1$ mirabait bait.fasta rawreads.fastq fishedreads
+
+2. run MITObim.sh script:
+
+Usage: sh MITObim.sh [PARAMETERS] [info on initial MIRA mapping assembly]
+
+Parameters:
+
+[start with iteration]  <int>           Desired iteration to start with
+[number of iterations]  <int>           Total number of iterations desired
+[mode]                  <string>        Mode the wrapper should be used in, SE - Single End, PE - Paired End
+[strain]                <string>        ID of the strain/population/species under question, e.g. thy1
+
+Required information from MIRA assembly to be used as starting point for iterations
+
+[MIRArefname]           <string>        Name of references strain used in Miraproject to be used as starting point for iterations, e.g. der-mt
+[PATH to MAF]           <PATH to file>  Full path (absolute) to the Mira *.maf file to be used as starting point for iterations
+[PATH to readpool]      <PATH to file>  Full path (absolute) to *.fastq file to be used as readpool in subsequent iterations
+
+NOTE: So far all 7(!) informations are required - the sequence is crucial!!!!!!!!!!!!!!!
+
+The script is performing three steps and iteratively repeating them: (i) Deriving reference sequence from privious mapping assembly, (ii) in silico baiting using the newly derived reference (iii) previously fished reads are mapped to the newly derived reference leading to an extension of the reference sequence. 
+An example for the usage would be:
+
+-bash-4.1$ sh MITObim.sh 1 20 SE STRAINname REFname ~/PATH/TO/DIRECTORY/MYPROJECT_out.maf ~/PATH/TO/readpool.fastq.gz >& MITObim.log
+
+The above command is running 20 iterations (starting from iteration 1) in Single End mode, i.e. no paired end information is used in the mapping assembly. STRAINname and REFname need to be consistent with the ones used in the prior mapping assembly. The MYPROJECT_out.maf file was created by the prior mapping assembly. The reference for the new iteration is derived from this file. The file readpool.fastq contains the entire readpool (the reads are expected to already be clipped and trimmed at this stage). The script is creating a new directory for every iteration in your working directory. The results for each iteration can be found in these directories, respecitely. 
+
