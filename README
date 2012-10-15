@@ -34,7 +34,7 @@ WALKTHROUGH MITObim
 As part of the iterative baiting and mapping (MITObim) procedure one has to prepare a starting reference. This will be derived from the conserved regions of a (distantly) related mitochondrial genome. Your working directory must contain at least two things: (1) A mitochondrial genome of a (distantly) related species in fasta format (e.g. obtained from Genbank) named MYPROJECT_backbone_in.fasta. (2) Illumina data in fastq format and named MYPROJECT_in_solexa.fastq. 
 Now we want to run a mapping assembly using MIRA 3.4. An example can be found below (This command performs a basic mapping assembly including prior trimming and clipping of your illumina reads): 
 
--bash-4.1$ mira --project=MYPROJECT --job=mapping,genome,accurate,solexa -MI:somrnl=0 -AS:nop=1 -SB:bft=fasta:bbq=30 SOLEXA_SETTINGS -CO:msr=no -SB:dsn=STRAINname:bsn=REFname
+-bash-4.1$ mira --project=MYPROJECT --job=mapping,genome,accurate,solexa -MI:somrnl=0 -AS:nop=1 -SB:bft=fasta:bbq=30:bsn=REFname SOLEXA_SETTINGS -CO:msr=no -SB:dsn=STRAINname
 
 For more detailed information on Solexa mapping assemblies with MIRA 3.4 see http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.html#sect_sxa_mapping_assemblies.
 
