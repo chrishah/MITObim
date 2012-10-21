@@ -22,6 +22,7 @@ my $refname = 0;
 my $readpool = 0;
 my $maf = 0;
 my $optionstest = 0;
+my $miramode;
 
 GetOptions (	"start=i" => \$startiteration,
 		"end=i" => \$enditeration,
@@ -83,9 +84,9 @@ if ($quick){
 	$startiteration = 0;
 }
 if (!$mode){
-	$mode = "mapping";
+	$miramode = "mapping";
 }else {
-	$mode = "denovo";
+	$miramode = "denovo";
 }
 
 print "\nAll paramters seem to make sense:\n";
@@ -97,7 +98,7 @@ print "readpool: $readpool\n";
 print "maf: $maf\n";
 print "quick: $quick\n";
 print "paired: $paired\n";
-print "denovo: $mode\n";
+print "denovo: $mode (mapping=0, denovo=1)\n";
 print "noshow: $noshow\n";
 
 print "\nStart MITObim\n";
@@ -122,7 +123,11 @@ foreach (@iteration){
 			print "\nconvert_project seems to have failed - see detailed output above\n";
 			exit;
 		}
-		open(FH1,"<tmp_$strainname.unpadded.fasta") or die "$!";
+		if ( ((($mode) && ($_ > 1)) && (!$quick)) || ((($mode) && ($_ >= 1)) && ($quick)) ){
+			open(FH1,"<tmp_default.unpadded.fasta") or die "$!";
+		}else{
+			open(FH1,"<tmp_$strainname.unpadded.fasta") or die "$!";
+		}
 		open(FH2,">$strainname-$refname\_backbone_in.fasta") or die "$!";
 		while (<FH1>) {
 			$_ =~ s/@/N/g;
@@ -188,7 +193,7 @@ foreach (@iteration){
 	unlink("list");
 	MIRA:
 	print "\nrunning assembly using MIRA v3.4\n\n";
-	my @MIRA_output = (`mira --project=$strainname-$refname --job=$mode,genome,accurate,solexa "--noclipping -CL:pec=no" -MI:somrnl=0 -AS:nop=1 -SB:bsn=$refname:bft=fasta:bbq=30 SOLEXA_SETTINGS -CO:msr=no -GE:uti=$paired -SB:dsn=$strainname 2>&1`);
+	my @MIRA_output = (`mira --project=$strainname-$refname --job=$miramode,genome,accurate,solexa "--noclipping -CL:pec=no" -MI:somrnl=0 -AS:nop=1 -SB:bsn=$refname:bft=fasta:bbq=30 SOLEXA_SETTINGS -CO:msr=no -GE:uti=$paired -SB:dsn=$strainname 2>&1`);
 	my $MIRA_exit = $? >> 8;
 	unless ($noshow){
 		print "@MIRA_output\n";
