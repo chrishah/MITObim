@@ -2,7 +2,8 @@
 #
 # MITObim - mitochondrial baiting and iterative mapping
 # wrapper script version 1.3
-# Author: Christoph Hahn, Oct. 2012
+# Author: Christoph Hahn, December 2012
+# please report problems to: christoph.hahn@nhm.uio.no
 #
 use strict;
 use warnings;
@@ -56,14 +57,14 @@ my $USAGE = 	"\nusage: ./MITObim.pl <parameters>\n
 		--noshow		do not show output of MIRA modules
 		--help			shows this information
 		--proofread		applies proofreading
-		--readlength <int>	read length of illumina library, default=150
-		--insert <int>		insert size of illumina library, default=300
+		--readlength <int>	read length of illumina library, default=150, needed for proofreading
+		--insert <int>		insert size of illumina library, default=300, needed for proofreading
 		\nexamples:\n
 		./MITObim.pl -start 1 -end 5 -strain StrainX -ref Gthymalli-mt -readpool /PATH/TO/readpool.fastq -maf /PATH/TO/assembly.maf
 		./MITObim.pl --quick /PATH/TO/reference.fasta -strain StrainY -ref Gthymalli-mt -readpool /PATH/TO/readpool.fastq\n";
 
 my $PROGRAM = "\nMITObim - mitochondrial baiting and iterative mapping\n";
-my $VERSION = "version 1.9\n";
+my $VERSION = "version 1.3\n";
 my $AUTHOR = "author: Christoph Hahn, (c) 2012\n\n";
 
 GetOptions (	"start=i" => \$startiteration,
@@ -82,7 +83,6 @@ GetOptions (	"start=i" => \$startiteration,
 		"insertsize=i" => \$insertsize) or die "Incorrect usage!\n$USAGE";
 
 
-
 print $PROGRAM; 
 print $VERSION; 
 print $AUTHOR; 
@@ -99,6 +99,7 @@ unless (((-e $maf)||($quick)) && (-e $readpool)){
         print "\nAre readpool AND maf files there?\n";
         exit;
 }
+##if not given otherwise, readlength and insertsize are set to default. automatic readlength and insertsize detection will be implemented in time.
 if (!$readlength){
 	$readlength = 150;
 }
@@ -132,9 +133,9 @@ print "paired: $paired\n";
 print "denovo: $mode (mapping=0, denovo=1)\n";
 print "noshow: $noshow\n";
 print "proofread: $proofreading\n";
-print "readlength: $readlength\n";
-print "insertsize: $insertsize\n";
 if ($proofreading){
+	print "readlength: $readlength\n";
+	print "insertsize: $insertsize\n";
 	print "number of allowed missmatches in proofreading assembly: $MM\n";
 }
 
@@ -206,8 +207,8 @@ foreach (@iteration){
 		open(FH2,">list");
 
 		while (<FH1>) {
-			if ((substr($_, 0, 1) == "@") && (substr($_, 1, 1) != "@")){
-                		$_ =~ s/@//g;
+			if ( ($_ =~ /^@|1$/) || ($_ =~ /^@|2$/)){
+				$_ =~ s/@//g;
 				($key, $val) = split /\//;
 		        	$hash{$key} .= exists $hash{$key} ? ",$val" : $val;
 			}
@@ -252,7 +253,7 @@ foreach (@iteration){
                 exit;
         }
 	$current_contiglength = &get_contig_length("$strainname-$refname\_assembly/$strainname-$refname\_d_info/$strainname-$refname\_info_contigstats.txt");
-	$current_number_of_reads = &get_number_of_reads("$strainname-$refname\_assembly/$strainname-$refname\_d_info/$strainname-$refname\_info_contigstats.txt");
+	$current_number_of_reads = (&get_number_of_reads("$strainname-$refname\_assembly/$strainname-$refname\_d_info/$strainname-$refname\_info_contigstats.txt") - 1);
 
 	PROOFREAD:
 #	if (($proofreading) && ($currentiteration >= 1)){
@@ -266,23 +267,6 @@ foreach (@iteration){
 #		print "assessing coverage in upper region from position " . ($current_contiglength-500) . " to $current_contiglength\n";
 		my @coverage_limits_upper = &assess_coverage($readtaglist, ($current_contiglength - (2*$insertsize)), ($current_contiglength), "upper");
 		
-#		mkdir "tmp" or die $!;
-#        	chdir "tmp" or die $!;
-#		copy ("../$strainname-$refname\_backbone_in.fasta", "$strainname-$refname-1MM_backbone_in.fasta") or die "copy failed: $!";
-#		copy ("../$strainname-$refname\_in.solexa.fastq", "$strainname-$refname-1MM_in.solexa.fastq") or die "copy failed: $!";
-        	
-#		print "\nrunning second instance of MIRA during proofreading\n\n";
-#		@output = (`mira --project=$strainname-$refname-1MM --job=$miramode,genome,accurate,solexa "--noclipping -CL:pec=no" -MI:somrnl=0 -AS:nop=1 -SB:bsn=$refname:bft=fasta:bbq=30 SOLEXA_SETTINGS -CO:msr=no -GE:uti=yes:tismin=100:tismax=600 -AL:shme=3 -SB:dsn=$strainname 2>&1`);
-#        	$exit = $? >> 8;
-#        	unless ($noshow){
-#                	print "@output\n";
-#        	}
-#        	unless ($exit == 0){
-#                	print "\nMIRA seems to have failed - see detailed output above\n";
-#                	exit;
-#        	}
-#		chdir ".." or die $!;
-#		my $contigreadlist_1MM = "tmp/$strainname-$refname-1MM_assembly/$strainname-$refname-1MM_d_info/$strainname-$refname-1MM_info_contigreadlist.txt";
 		print "\nScreening orphan reads and discarding potentially dubious reads\n";	
 		open(OUT,">list");
 #		print OUT &proofread($contigreadlist, $contigreadlist_1MM);
@@ -320,8 +304,10 @@ foreach (@iteration){
 			exit;
 		}
 		$current_contiglength = &get_contig_length("$strainname-$refname-proofread_assembly/$strainname-$refname-proofread_d_info/$strainname-$refname-proofread_info_contigstats.txt");
-		$current_number_of_reads = &get_number_of_reads("$strainname-$refname-proofread_assembly/$strainname-$refname-proofread_d_info/$strainname-$refname-proofread_info_contigstats.txt");
-
+		$current_number_of_reads = (&get_number_of_reads("$strainname-$refname-proofread_assembly/$strainname-$refname-proofread_d_info/$strainname-$refname-proofread_info_contigstats.txt") - 1);
+	}
+	if ($mode){
+		$current_number_of_reads++;
 	}
 	push (@number_of_reads, "$current_number_of_reads");
 	push (@contiglengths, "$current_contiglength");
@@ -334,15 +320,6 @@ foreach (@iteration){
 			exit;
 		}
 	}
-#	while ($proofreading) {
-#		if ($contiglengths[-2]){
-#			if ($contiglengths[-1] == $contiglengths[-2]){
-#				print "\nMITObim has reached a stationary contig length after $currentiteration iterations!!\n";
-#				print strftime("%b %e %H:%M:%S", localtime) . "\n\n";
-#				exit;
-#			}
-#		}
-#	}
 	chdir ".." or die "Failed to go to parent directory: $!";
 }
 print "\nsuccessfully completed $enditeration iterations with MITObim! " . strftime("%b %e %H:%M:%S", localtime) . "\n\n";
@@ -502,7 +479,6 @@ sub proofread {
 		print "read mapping from $min to $max\n";
 #                print "min: $min\n";
 #                print "max: $max\n";
-#                if (($min <= $lower_limit) || ($max >= $upper_limit) || ($min >= $lower_main_limit) || ($max <= $upper_main_limit)) {
 
 		if ($min <= $lower_limit){
                         print "orphan discarded! min<lowerlimit\n----------------------------------------------\n";
@@ -510,13 +486,9 @@ sub proofread {
 			print "orphan discarded! max>upperlimit\n----------------------------------------------\n";
 		}elsif (($min >= $lower_main_limit) && ($max <= $upper_main_limit)){
 			print "orphan discarded! lower_main_limit<min-max<upper_main_limit\n----------------------------------------------\n";
-#		}elsif ((($min >= $elevated_cov_lower_start) && ($min <= $elevated_cov_lower_end)) || (($max >= $elevated_cov_lower_start) && ($max <= $elevated_cov_lower_end)) || (($min < $elevated_cov_lower_start) && ($max > $elevated_cov_lower_end))){
 		}elsif (($min >= $elevated_cov_lower_start) && ($min <= $elevated_cov_lower_end - ($lower_limit / 2))){
-#		}elsif ( (($max >= $elevated_cov_lower_start) && ($max <= $elevated_cov_lower_end)) || (($min < $elevated_cov_lower_start) && ($max > $elevated_cov_lower_end))){
 			print "orphan discarded! increased_coverage_lower_start<min<increased_coverage_lower_end\n----------------------------------------------\n";
-#		}elsif ((($max >= $elevated_cov_upper_start) && ($max <= $elevated_cov_upper_end)) || (($min >= $elevated_cov_upper_start) && ($min <= $elevated_cov_upper_end)) || (($min < $elevated_cov_upper_start) && ($max > $elevated_cov_upper_end))){
 		}elsif (($max >= ($elevated_cov_upper_start + ($lower_limit / 2)))  && ($max <= $elevated_cov_upper_end)){
-#		}elsif ( (($min >= $elevated_cov_upper_start) && ($min <= $elevated_cov_upper_end)) || (($min < $elevated_cov_upper_start) && ($max > $elevated_cov_upper_end))){
 			print "orphan discarded! increased_coverage_upper_start<max<increased_coverage_upper_end\n----------------------------------------------\n";
 		}else {
                         push(@singletons, "@singleton\n");
@@ -567,12 +539,10 @@ sub standard_deviation {
         my $std_dev = sqrt($mean2);
 	push (@stdev, "$std_dev");
         return @stdev;
-#	return $std_dev;
 }
 
 sub assess_coverage{
         my $readtaglist_FH = $_[0];
-#        my $contiglength = $_[1];
         my @readtaglist;
         my $from =$_[1];
         my $to = $_[2];
@@ -690,82 +660,5 @@ sub assess_coverage{
 	}
 	return @coverage_limits;	
 
-
-
-#		my $max_stdev = 0;
-#		my $max_stdev_position = 0;
-#		print "\nunusually high coverage detected in $where region! coverage peaks at position $max_cov_position\n";
-#		for ($from..($max_cov_position - 5)){
-##		for ($from..($to - 5)){
-#                	my $position = $_;
-#                	my $cov = $coverage{$position};
-#                	unless (!$cov){
-#                        	my @positions = ();
-#                        	push (@positions, "$cov");
-#                        	for (1..4){
-#                                	my $pos_plus = $position + $_;
-#                                	if ($coverage{$pos_plus}){
-#						push (@positions, "$coverage{$pos_plus}");
-#                        		}
-#				}
-#                		my @stdev = &standard_deviation(@positions);
-#				if ($stdev[1] > $max_stdev){
-#					$max_stdev = $stdev[1];
-#					$max_stdev_position = $position;
-#				}
-#				if ($stdev[1] >= 2.0){
-#					print "positions ($position): @positions -> stdev: $stdev[1]\n";
-#				}
-#
-#                	if ($stdev[1] > 2.5){
-#                        	print "positions ($position): @positions -> stdev: $stdev[1]\n";
-#                        	push (@coverage_change_position, $position);
-#			}elsif ($stdev[1] >= 2.0){
-#                       	 print "positions ($position): @positions -> stdev: $stdev[1]\n";
-#                	}
-#                	}
-#        	}
-#		push (@coverage_limits, "$max_stdev_position");
-#		$max_stdev = 0;
-#                $max_stdev_position = 0;
-#		for (reverse ($max_cov_position..($to - 5))){
-#			my $position = $_;
-#			my $cov = $coverage{$position};
-#			unless (!$cov){
-#                                my @positions = ();
-#                                push (@positions, "$cov");
-#                                for (1..4){
-#                                        my $pos_plus = $position + $_;
-#                                        if ($coverage{$pos_plus}){
-#                                                push (@positions, "$coverage{$pos_plus}");
-#                                        }
-#                                }
-#                                my @stdev = &standard_deviation(@positions);
-#                                if ($stdev[1] > $max_stdev){
-#                                        $max_stdev = $stdev[1];
-#                                        $max_stdev_position = $position;
-#                                }
-#				if ($stdev[1] >= 2.0){
-#					print "positions ($position): @positions -> stdev: $stdev[1]\n";
-#				}
-#			}
-#		}
-#		push (@coverage_limits, "$max_stdev_position");
-#		print "conserved region predicted from position $coverage_limits[0] to $coverage_limits[1]\n";
-#	}else {
-#		print "\nno indication of increased coverage detected in $where region!\n\n";
-#		push (@coverage_limits, "0", "0");
-#	}
-#        if (@coverage_change_position){
-#                print "positions with rapidly changing coverage detected: @coverage_change_position\n";
-#                my $start = min @coverage_change_position;
-#                my $end = max @coverage_change_position;
-#                push (@coverage_limits, "$start", "$end");
-#                print "set limits from $coverage_limits[0] to $coverage_limits[1]\n";
-#        }else{
-#                print "no irregularities in coverage detected\n";
-#        	push (@coverage_limits, "0", "0");
-#	}
-#        return @coverage_limits;
 }
 
