@@ -95,10 +95,29 @@ unless ($quick){
 }
 print $USAGE and exit if !$refname;
 
-unless (((-e $maf)||($quick)) && (-e $readpool)){
-        print "\nAre readpool AND maf files there?\n";
+unless (-e $readpool){
+        print "Can't find the readpool file. Is the path correct?\n";
         exit;
 }
+if ($maf){
+	unless (-e $maf){
+		print "Can't find the maf file. Is the path correct?\n";
+		exit;
+	}
+	$maf = abs_path($maf);
+}
+if ($quick){
+        unless (-e $quick){
+		print "quick option selected but is the file there?\n";
+		exit;
+	}
+	$quick = abs_path($quick);
+	print "quick option selected! -maf option will be ignored (if given)\n";
+	$maf = 0;
+	$startiteration = 0;
+}
+
+
 ##if not given otherwise, readlength and insertsize are set to default. automatic readlength and insertsize detection will be implemented in time.
 if (!$readlength){
 	$readlength = 150;
@@ -106,15 +125,7 @@ if (!$readlength){
 if (!$insertsize){
 	$insertsize = 300;
 }
-if ($quick){
-        unless (-e $quick){
-		print "quick option selected but is the file there?\n";
-		exit;
-	}
-	print "quick option selected! -maf option will be ignored (if given)\n";
-	$maf = 0;
-	$startiteration = 0;
-}
+
 if (!$mode){
 	$miramode = "mapping";
 }else {
