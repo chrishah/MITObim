@@ -1,9 +1,9 @@
 #! /usr/bin/perl
 #
 # MITObim - mitochondrial baiting and iterative mapping
-# wrapper script version 1.3
-# Author: Christoph Hahn, December 2012
-# please report problems to: christoph.hahn@nhm.uio.no
+# wrapper script version 1.5
+# Author: Christoph Hahn, 2012-2013
+# christoph.hahn@nhm.uio.no
 #
 use strict;
 use warnings;
@@ -15,57 +15,41 @@ use POSIX qw(strftime);
 
 my $startiteration = 1;
 my $enditeration = 1;
-my $quick = 0;
-my $noshow = 0;
-my $help = 0;
-my $strainname = 0;
-my $paired = 0;
-my $mode = 0;
-my $refname = 0;
-my $readpool = 0;
-my $maf = 0;
-my $proofreading = 0;
-my $readlength = 0;
-my $insertsize = 0;
-#my $optionstest = 0;
-my $miramode;
-my @reads = ();
-my %hash;
-my $key;
-my $val;
-my @output = ();
-my $exit = ();
-my @path = ();
+
+my ($quick, $noshow, $help, $strainname, $paired, $mode, $refname, $readpool, $maf, $proofreading, $readlength, $insertsize, $MM, $trim) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+my ($miramode, $key, $val, $exit, $current_contiglength, $current_number_of_reads, $iontor);
+my $platform = "solexa";
+my $platform_settings = "SOLEXA";
 my $shme = "";
-my $MM = 0;
-my $current_contiglength;
-my @contiglengths;
-my $current_number_of_reads;
-my @number_of_reads;
+my $trim_off = "";
+my (@reads, @output, @path, @contiglengths, @number_of_reads);
+my %hash;
 my $USAGE = 	"\nusage: ./MITObim.pl <parameters>\n
 	 	\nparameters:\n
 		-start <int>		iteration to start with, default=1
 		-end <int>		iteration to end with, default=1
 		-strain	<string>	strainname as used in initial MIRA assembly
 		-ref <string>		referencename as used in initial MIRA assembly
-		-readpool <PATH>	path to readpool in fastq format
-		-maf <PATH>		path to maf file from previous MIRA assembly\n
+		-readpool <FILE>	readpool in fastq format
+		-maf <FILE>		maf file from previous MIRA assembly\n
 		\noptional:\n
+		--quick <FILE>		starts process with initial baiting using provided fasta reference
 		--denovo		runs MIRA in denovo mode, default: mapping
 		--pair			finds pairs after baiting, default: no
-		--quick <PATH>		starts process with initial baiting using provided fasta reference
 		--noshow		do not show output of MIRA modules
-		--help			shows this information
-		--proofread		applies proofreading
+		--help			shows this helpful information
+		--trim			trim data (we recommend to trim beforehand and feed MITObim with pre trimmed data)
+		--iontor		use data produced by iontorrent (experimental - default is illumina data)
+		--proofread		applies proofreading (atm only to be used if starting the process from a single short seed reference)
 		--readlength <int>	read length of illumina library, default=150, needed for proofreading
 		--insert <int>		insert size of illumina library, default=300, needed for proofreading
 		\nexamples:\n
-		./MITObim.pl -start 1 -end 5 -strain StrainX -ref Gthymalli-mt -readpool /PATH/TO/readpool.fastq -maf /PATH/TO/assembly.maf
-		./MITObim.pl --quick /PATH/TO/reference.fasta -strain StrainY -ref Gthymalli-mt -readpool /PATH/TO/readpool.fastq\n";
+		./MITObim.pl -start 1 -end 5 -strain StrainX -ref reference-mt -readpool illumina_readpool.fastq -maf initial_assembly.maf
+		./MITObim.pl -end 10 --quick reference.fasta -strain StrainY -ref reference-mt -readpool illumina_readpool.fastq\n";
 
 my $PROGRAM = "\nMITObim - mitochondrial baiting and iterative mapping\n";
-my $VERSION = "version 1.3\n";
-my $AUTHOR = "author: Christoph Hahn, (c) 2012\n\n";
+my $VERSION = "version 1.5\n";
+my $AUTHOR = "author: Christoph Hahn, (c) 2012-2013\n\n";
 
 GetOptions (	"start=i" => \$startiteration,
 		"end=i" => \$enditeration,
@@ -79,6 +63,8 @@ GetOptions (	"start=i" => \$startiteration,
 		"help!" => \$help,
 		"maf=s" => \$maf,
 		"proofreading!" => \$proofreading,
+		"trim!" => \$trim,
+		"iontor!" => \$iontor,
 		"readlength=i" => \$readlength,
 		"insertsize=i" => \$insertsize) or die "Incorrect usage!\n$USAGE";
 
@@ -95,6 +81,26 @@ unless ($quick){
 }
 print $USAGE and exit if !$refname;
 
+$readpool=abs_path($readpool);
+unless (-e $readpool){
+	print "Cant find the readpool. Is the path correct?\n";
+}
+if ($maf){
+	$maf=abs_path($maf);
+	unless (-e $maf){
+		print "Cant find *.maf file. Is the path correct?\n";
+	}
+}
+if ($quick){
+	$quick=abs_path($quick);
+        unless (-e $quick){
+		print "quick option selected but is the path to the file correct?\n";
+		exit;
+	}
+	print "quick option selected! -maf option will be ignored (if given)\n";
+	$maf = 0;
+	$startiteration = 0;
+}
 unless (((-e $maf)||($quick)) && (-e $readpool)){
         print "\nAre readpool AND maf files there?\n";
         exit;
@@ -106,19 +112,19 @@ if (!$readlength){
 if (!$insertsize){
 	$insertsize = 300;
 }
-if ($quick){
-        unless (-e $quick){
-		print "quick option selected but is the file there?\n";
-		exit;
-	}
-	print "quick option selected! -maf option will be ignored (if given)\n";
-	$maf = 0;
-	$startiteration = 0;
-}
 if (!$mode){
 	$miramode = "mapping";
 }else {
 	$miramode = "denovo";
+}
+
+if (!$trim){
+	$trim_off = "\"--noclipping -CL:pec=no\"";
+}
+
+if ($iontor){
+	$platform = "iontor";
+	$platform_settings = "IONTOR";
 }
 
 print "\nAll paramters seem to make sense:\n";
@@ -133,6 +139,8 @@ print "paired: $paired\n";
 print "denovo: $mode (mapping=0, denovo=1)\n";
 print "noshow: $noshow\n";
 print "proofread: $proofreading\n";
+print "read trimming: $trim (off=0, on=1)\n";
+print "platform: $platform_settings\n";
 if ($proofreading){
 	print "readlength: $readlength\n";
 	print "insertsize: $insertsize\n";
@@ -159,7 +167,7 @@ foreach (@iteration){
 	if ($maf){
 		print "\nrecover backbone by running convert_project on maf file\n";
 
-		@output= (`convert_project -f maf -t fasta -A "SOLEXA_SETTINGS -CO:fnicpst=yes" $maf tmp 2>&1`);
+		@output= (`convert_project -f maf -t fasta -A "$platform_settings\_SETTINGS -CO:fnicpst=yes" $maf tmp 2>&1`);
 		$exit = $? >> 8;
 		unless ($noshow){
 			print "@output\n";
@@ -187,9 +195,10 @@ foreach (@iteration){
 		print "\nquick option baits reads from provided reference in iteration 0\n";
 		copy("$quick", "$strainname-$refname\_backbone_in.fasta") or die "copy failed: $!";		
 	}
+	&check_ref_length("$strainname-$refname\_backbone_in.fasta","temp_baitfile.fasta",29800);
 	print "\nfishing readpool using mirabait\n";
 	
-	@output = (`mirabait -k 31 -n 1 $strainname-$refname\_backbone_in.fasta $readpool $strainname-$refname\_in.solexa 2>&1`);
+	@output = (`mirabait -k 31 -n 1 temp_baitfile.fasta $readpool $strainname-$refname\_in.$platform 2>&1`);
 	$exit = $? >> 8;
 	unless ($noshow){
 		print "@output\n";
@@ -203,7 +212,7 @@ foreach (@iteration){
 	
 	unless (!$paired){
 		print "\nfind pairs to baited reads\n";
-		open(FH1,"<$strainname-$refname\_in.solexa.fastq") or die $!;
+		open(FH1,"<$strainname-$refname\_in.$platform.fastq") or die $!;
 		open(FH2,">list");
 
 		while (<FH1>) {
@@ -221,7 +230,7 @@ foreach (@iteration){
 		}
 		close(FH1);
 		close(FH2);
-		@output = (`convert_project -f fastq -t fastq -n list $readpool $strainname-$refname\_in.solexa 2>&1`);
+		@output = (`convert_project -f fastq -t fastq -n list $readpool $strainname-$refname\_in.$platform 2>&1`);
 		$exit = $? >> 8;
 		unless ($noshow){
 			print "@output\n";
@@ -235,7 +244,7 @@ foreach (@iteration){
 	
 	MIRA:
 	print "\nrunning assembly using MIRA v3.4\n\n";
-	@output = (`mira --project=$strainname-$refname --job=$miramode,genome,accurate,solexa "--noclipping -CL:pec=no" -MI:somrnl=0 -AS:nop=1 -SB:bsn=$refname:bft=fasta:bbq=30 SOLEXA_SETTINGS -CO:msr=no -GE:uti=$paired $shme -SB:dsn=$strainname 2>&1`);
+	@output = (`mira --project=$strainname-$refname --job=$miramode,genome,accurate,$platform $trim_off -notraceinfo -MI:somrnl=0 -AS:nop=1 -SB:bsn=$refname:bft=fasta:bbq=30 $platform_settings\_SETTINGS -CO:msr=no -GE:uti=$paired $shme -SB:dsn=$strainname 2>&1`);
 	$exit = $? >> 8;
 	unless ($noshow){
 		print "@output\n";
@@ -274,7 +283,7 @@ foreach (@iteration){
 		close(OUT);	
 
 		print "\ngenerating proofread readpool\n";
-		@output = (`convert_project -f fastq -t fastq -n list $strainname-$refname\_in.solexa.fastq $strainname-$refname-proofread\_in.solexa 2>&1`);
+		@output = (`convert_project -f fastq -t fastq -n list $strainname-$refname\_in.$platform.fastq $strainname-$refname-proofread\_in.$platform 2>&1`);
 		$exit = $? >> 8;
 		unless ($noshow){
 			print "@output\n";
@@ -286,7 +295,7 @@ foreach (@iteration){
 		copy("$strainname-$refname\_backbone_in.fasta", "$strainname-$refname-proofread\_backbone_in.fasta") or die "copy failed: $!";	
 
 		print "\nrunning proofread assembly using MIRA v3.4\n\n";
-        	@output = (`mira --project=$strainname-$refname-proofread --job=$miramode,genome,accurate,solexa "--noclipping -CL:pec=no" -MI:somrnl=0 -AS:nop=1 -SB:bsn=$refname:bft=fasta:bbq=30 SOLEXA_SETTINGS -CO:msr=no -GE:uti=yes:tismin=100:tismax=600 $shme -SB:dsn=$strainname 2>&1`);
+        	@output = (`mira --project=$strainname-$refname-proofread --job=$miramode,genome,accurate,$platform $trim_off -notraceinfo -MI:somrnl=0 -AS:nop=1 -SB:bsn=$refname:bft=fasta:bbq=30 $platform_settings\_SETTINGS -CO:msr=no -GE:uti=yes:tismin=100:tismax=600 $shme -SB:dsn=$strainname 2>&1`);
         	$exit = $? >> 8;
         	unless ($noshow){
                 	print "@output\n";
@@ -322,7 +331,9 @@ foreach (@iteration){
 	}
 	chdir ".." or die "Failed to go to parent directory: $!";
 }
-print "\nsuccessfully completed $enditeration iterations with MITObim! " . strftime("%b %e %H:%M:%S", localtime) . "\n\n";
+print "\nsuccessfully completed $enditeration iterations with MITObim! " . strftime("%b %e %H:%M:%S", localtime) . "
+\nif you found this program useful, please cite:
+Hahn C, Bachmann L & Chevreux B. Reconstructing mitochondrial genomes directly from genomic next-generation sequencing reads--a baiting and iterative mapping approach. Nucleic Acids Res. 2013; doi: 10.1093/nar/gkt371\n\n";
 
 #
 #
@@ -660,5 +671,75 @@ sub assess_coverage{
 	}
 	return @coverage_limits;	
 
+}
+
+sub check_ref_length{
+        my $ref=$_[0];
+        my $output_filename=$_[1];
+        my $critical=$_[2];
+        my @header;
+        my $header_count=0;
+        my (@sequence,@temp_output,@final_output);
+        my $full_sequence;
+        open(REF,"<$ref") or die $!;
+        while(<REF>){
+                chomp;
+                if ($_ =~ /^>/){
+                        push(@header,$_);
+#                       print "found header:\n$header[$header_count]\n";
+                        $header_count++;
+#                       print "header count: $header_count\n";
+                        if (@sequence){
+                                @temp_output=&finalize_sequence($critical,$header[-2],@sequence);
+                                for (@temp_output){
+                                        push(@final_output,$_);
+                                }
+                        }
+                        undef @sequence;
+                }elsif ($_ =~ /[a-zA-Z]/){
+#                       print "found sequence:\n$_\n";
+                        push(@sequence,$_);
+                }
+        }
+        @temp_output=&finalize_sequence($critical,$header[-1],@sequence);
+        for (@temp_output){
+                push(@final_output,$_);
+        }
+#       print "result:\n";
+        open (OUT,">$output_filename") or die $!;
+        for(@final_output){
+#               print "$_\n";
+                print OUT "$_\n";
+        }
+        close REF;
+        close OUT;
+
+}
+
+sub finalize_sequence{
+        my $critical=shift(@_);
+        my $header=shift(@_);
+        my $full_sequence=join("",@_);
+        my $factor;
+        my @output;
+	if (!$critical){
+                $factor=0;
+        }else{
+                $factor=int(length ($full_sequence)/$critical);
+        }
+        if ($factor <= 1){
+                push(@output,$header);
+                push(@output,$full_sequence);
+        }else{ #too long
+		print "\nreference is too long for mirabait to be handled in one go -> will be split into sub-sequences\n";
+        	$header=substr $header, 1;
+                for (my $i=0; $i<=$factor;$i++){
+                        unless ((length(substr $full_sequence, $i*$critical, $critical+31)-31)<0){
+                                push(@output,">sub$i " .$header);
+                                push(@output,substr $full_sequence, $i*$critical, $critical+31);
+                        }
+                }
+        }
+        return @output;
 }
 
