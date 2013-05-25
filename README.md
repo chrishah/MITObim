@@ -117,7 +117,7 @@ The project name of the initial mapping assembly might be e.g. "initial-mapping-
   
 Run a mapping assembly (details on the options can be found at http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.html):
 
-	-bash-4.1$ mira --project=initial-mapping-testpool-to-Salpinus-mt --job=mapping,genome,accurate,solexa -MI:somrnl=0 -AS:nop=1 -SB:bft=fasta:bbq=30:bsn=Omykiss-mt-genome SOLEXA_SETTINGS -CO:msr=no -SB:dsn=testpool 
+	-bash-4.1$  mira --project=initial-mapping-testpool-to-Salpinus-mt --job=mapping,genome,accurate,solexa -MI:somrnl=0 -AS:nop=1 -SB:bft=fasta:bbq=30:bsn=Salpinus-mt-genome SOLEXA_SETTINGS -CO:msr=no -SB:dsn=testpool 
 
 Look what happened:
 
@@ -142,7 +142,7 @@ b. Baiting and iterative mapping using the MITObim.pl script:
 
 Run the wrapper script as follows (standard output will be written into the file log):
 
-	-bash-4.1$ /PATH/TO/MITObim.pl -start 1 -end 10 -strain testpool -ref Salpinus_mt_genome -readpool ~/PATH/TO/tutorial1/initial-mapping-testpool-to-Salpinus-mt_in.solexa.fastq -maf ~/PATH/TO/tutorial1/initial-mapping-testpool-to-Salpinus-mt_assembly/initial-mapping-testpool-to-Salpinus-mt_d_results/initial-mapping-testpool-to-Salpinus-mt_out.maf &> log
+	-bash-4.1$ /PATH/TO/MITObim.pl -start 1 -end 10 -strain testpool -ref Salpinus_mt_genome -readpool initial-mapping-testpool-to-Salpinus-mt_in.solexa.fastq -maf initial-mapping-testpool-to-Salpinus-mt_assembly/initial-mapping-testpool-to-Salpinus-mt_d_results/initial-mapping-testpool-to-Salpinus-mt_out.maf &> log
 
 NOTE: 
 - The strain name needs to be the same as used in the initial MIRA assembly.
