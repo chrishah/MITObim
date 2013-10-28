@@ -5,7 +5,7 @@ MITObim - mitochondrial baiting and iterative mapping
 
 VERSION
 -------
-1.5
+1.6
 
 Copyright Christoph Hahn 2012-2013
 
@@ -17,7 +17,7 @@ Christoph Hahn <christoph.hahn@nhm.uio.no>
 INTRODUCTION
 ------------
 
-This document contains instructions on how to use the MITObim pipeline described in Hahn et al. 2013. The full article can be found at http://nar.oxfordjournals.org/content/early/2013/05/09/nar.gkt371.full. Kindly cite the article if you are using MITObim in your work. The pipeline is at the moment intended to be used with illumina data, but can be readily modified for the use with other platforms data (MITObim v1.5 experimentally enables the use of iontorrent data).
+This document contains instructions on how to use the MITObim pipeline described in Hahn et al. 2013. The full article can be found at http://nar.oxfordjournals.org/content/early/2013/05/09/nar.gkt371.full. Kindly cite the article if you are using MITObim in your work. The pipeline is at the moment intended to be used with illumina data, but can be readily modified for the use with other platforms data (MITObim v1.6 experimentally enables the use of iontorrent and 454 data).
 
 
 PREREQUISITES
@@ -27,6 +27,11 @@ PREREQUISITES
 - Perl
 - A running version of MIRA v3.4.1.1 (http://sourceforge.net/projects/mira-assembler/files/MIRA/stable/) is required. An excellent guide to MIRA v3.4 is available at http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.html.
 
+COMMENT
+-------
+
+Version 1.6 will be the last to rely on MIRA v3.4.1.1. MITObim v1.7 (to be uploaded soon) will be compatible with MIRAv4.
+
 
 General introduction to MITObim
 -------------------------------
@@ -34,7 +39,7 @@ General introduction to MITObim
 The MITObim procedure (mitochondrial baiting and iterative mapping) represents a highly efficient approach to assembling novel mitochondrial genomes of non-model organisms directly from total genomic DNA derived NGS reads. Labor intensive long-range PCR steps prior to sequencing are no longer required. MITObim is capable of reconstructing mitochondrial genomes without the need of a reference genome of the targeted species by relying solely on (a) mitochondrial genome information of more distantly related taxa or (b) short mitochondrial barcoding sequences (seeds), such as the commonly used cytochochrome-oxidase subunit 1 (COI), as a starting reference. 
 
 The script is performing three steps and iteratively repeating them: (i) Deriving reference sequence from previous mapping assembly, (ii) in silico baiting using the newly derived reference (iii) previously fished reads are mapped to the newly derived reference leading to an extension of the reference sequence.
-For more details please refer to the Hahn et al. 2013. Detailed examples are demonstrated in the TUTORIALS section below.
+For more details please refer to Hahn et al. 2013. Detailed examples are demonstrated in the TUTORIALS section below.
 
 
 TUTORIALS
@@ -44,7 +49,7 @@ The following tutorials are designed for users with little Unix and no previous 
 
 Preparations:
 
-- download/compile MIRA 3.4.1.1 (http://sourceforge.net/projects/mira-assembler/files/MIRA/stable/). Precompiled binaries are available for linux. Help can be found at http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.htm. You ll need to put the directory containing the MIRA executables in your PATH in order to successfully use MITObim.pl.
+- download/compile MIRA 3.4.1.1 (http://sourceforge.net/projects/mira-assembler/files/MIRA/stable/). Precompiled binaries are available for linux. Help can be found at http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.htm. You ll need to put the directory containing the MIRA executables in your PATH (or tell MITObim were to find the MIRA binaries using the --mirapath option) in order to successfully use MITObim.pl.
 - download the MITObim wrapper script and the testdata from Github, e.g. download the entire MITObim repository as zip archive (use the button on the Github page) or use git on the command line (git clone --recursive git://github.com/chrishah/MITObim.git).
 - make the MITObim.pl executable (chmod a+x MITObim.pl) and extract the contents of the testdata archives (tar xvfz testdata?.tgz)
 
@@ -65,22 +70,24 @@ which should display the usage:
                 -readpool <FILE>        readpool in fastq format
                 -maf <FILE>             maf file from previous MIRA assembly
 
-	optional:
+optional:
                 --quick <FILE>          starts process with initial baiting using provided fasta reference
+                --kbait <int>           set kmer for baiting stringency (default: 31)
                 --denovo                runs MIRA in denovo mode, default: mapping
-                --pair                  finds pairs after baiting, default: no
-                --noshow                do not show output of MIRA modules
+                --pair                  finds pairs after baiting (relies on /1 and /2 ID convention for read pairs), default: no
                 --help                  shows this helpful information
+                --clean                 retain only the last 2 iteration directories
                 --trim                  trim data (we recommend to trim beforehand and feed MITObim with pre trimmed data)
                 --iontor                use data produced by iontorrent (experimental - default is illumina data)
+                --454                   use 454 data (experimental - default is illumina data)
+                --mirapath <string>     full path to MIRA binaries (only needed if MIRA is not in PATH)
                 --proofread             applies proofreading (atm only to be used if starting the process from a single short seed reference)
                 --readlength <int>      read length of illumina library, default=150, needed for proofreading
                 --insert <int>          insert size of illumina library, default=300, needed for proofreading
-
-	examples:
-
+examples:
                 ./MITObim.pl -start 1 -end 5 -strain StrainX -ref reference-mt -readpool illumina_readpool.fastq -maf initial_assembly.maf
                 ./MITObim.pl -end 10 --quick reference.fasta -strain StrainY -ref reference-mt -readpool illumina_readpool.fastq
+
 
 The archive testdata1 contains three files:
 MIT
@@ -90,13 +97,6 @@ MIT
 
 3. Tthymallus-COI-partial-HQ961018.fasta - partial COI sequence of _T. thymallus_ (Genbank acc. HQ961018).
 
-The archive testdata2 (to be uploaded soon) contains three files:
-
-1. pooled-150bp-300sd50-interleaved.fastq - mixed dataset containing 6000 simulated reads for the mt genomes of _T. thymallus_ (Genbank acc. FJ853655) and _S. alpinus_ (Genbank acc. NC_000861), respectively.
-
-2. Tthymallus-COI-FJ853655.fasta - 1200 bp COI sequence of _T. thymallus_ extracted from the mt genome used for read simulation (Genbank acc. FJ853655).
-
-3. Salpinus-COI-NC_000861.fasta - 1200 bp COI seqeuence of _S. alpinus_ extracted from the mt genome used for read simulation (Genbank acc. NC_000861).
 
 TUTORIAL I: reconstruction of a mitochondrial genome using a two step procedure
 -------------------------------------------------------------------------------
@@ -186,7 +186,7 @@ Run the MITObim.pl script with the --quick option, providing a reference in fast
 
 You will find that with this approach MITObim will reconstruct the mitochondrial genome and reach a stationary number of mitochondrial reads only after 15 iterations. The result should nevertheless be equal to that obtained in TUTORIAL I and we were able to bypass the increased memory requirements of the initial MIRA mapping assembly.
 
-**CONGRATULATIONS** There is more..
+**CONGRATULATIONS!!** ..but, there is more..
 
 TUTORIAL III - reconstructing mt genomes from mt barcode seeds
 --------------------------------------------------------------
