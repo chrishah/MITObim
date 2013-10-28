@@ -70,7 +70,7 @@ which should display the usage:
                 -readpool <FILE>        readpool in fastq format
                 -maf <FILE>             maf file from previous MIRA assembly
 
-optional:
+	optional:
                 --quick <FILE>          starts process with initial baiting using provided fasta reference
                 --kbait <int>           set kmer for baiting stringency (default: 31)
                 --denovo                runs MIRA in denovo mode, default: mapping
@@ -84,7 +84,7 @@ optional:
                 --proofread             applies proofreading (atm only to be used if starting the process from a single short seed reference)
                 --readlength <int>      read length of illumina library, default=150, needed for proofreading
                 --insert <int>          insert size of illumina library, default=300, needed for proofreading
-examples:
+	examples:
                 ./MITObim.pl -start 1 -end 5 -strain StrainX -ref reference-mt -readpool illumina_readpool.fastq -maf initial_assembly.maf
                 ./MITObim.pl -end 10 --quick reference.fasta -strain StrainY -ref reference-mt -readpool illumina_readpool.fastq
 
