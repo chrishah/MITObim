@@ -1,7 +1,7 @@
 #! /usr/bin/perl
 #
 # MITObim - mitochondrial baiting and iterative mapping
-# wrapper script version 1.5
+# wrapper script version 1.6
 # Author: Christoph Hahn, 2012-2013
 # christoph.hahn@nhm.uio.no
 #
@@ -12,18 +12,24 @@ use Cwd qw(abs_path);
 use File::Copy;
 use List::Util qw< min max >;
 use POSIX qw(strftime);
+use POSIX qw(ceil);
+use File::Path 'rmtree';
 
 my $startiteration = 1;
 my $enditeration = 1;
 
-my ($quick, $noshow, $help, $strainname, $paired, $mode, $refname, $readpool, $maf, $proofreading, $readlength, $insertsize, $MM, $trim) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-my ($miramode, $key, $val, $exit, $current_contiglength, $current_number_of_reads, $iontor);
+my ($quick, $noshow, $help, $strainname, $paired, $mode, $refname, $readpool, $maf, $proofreading, $readlength, $insertsize, $MM, $trim, $k_bait, $clean, $clean_interval) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 31, 0, 2);
+my ($miramode, $key, $val, $exit, $current_number_of_contigs, $current_contiglength, $current_number_of_reads, $iontor, $Roche454);
 my $platform = "solexa";
 my $platform_settings = "SOLEXA";
 my $shme = "";
+my ($mirapath, $mira, $convert_project, $mirabait) = ("", "mira", "convert_project", "mirabait");
 my $trim_off = "";
-my (@reads, @output, @path, @contiglengths, @number_of_reads);
+my (@reads, @output, @number_of_contigs, @current_contig_stats, @path, @contiglengths, @number_of_reads);
 my %hash;
+my $cite = "\nif you found MITObim useful, please cite:
+Hahn C, Bachmann L and Chevreux B. (2013) Reconstructing mitochondrial genomes directly from genomic next-generation sequencing reads -
+a baiting and iterative mapping approach. Nucl. Acids Res. 41(13):e129. doi: 10.1093/nar/gkt371\n\n";
 my $USAGE = 	"\nusage: ./MITObim.pl <parameters>\n
 	 	\nparameters:\n
 		-start <int>		iteration to start with, default=1
@@ -34,12 +40,16 @@ my $USAGE = 	"\nusage: ./MITObim.pl <parameters>\n
 		-maf <FILE>		maf file from previous MIRA assembly\n
 		\noptional:\n
 		--quick <FILE>		starts process with initial baiting using provided fasta reference
+		--kbait <int>           set kmer for baiting stringency (default: 31)
 		--denovo		runs MIRA in denovo mode, default: mapping
-		--pair			finds pairs after baiting, default: no
+		--pair			finds pairs after baiting (relies on /1 and /2 ID convention for read pairs), default: no
 		--noshow		do not show output of MIRA modules
 		--help			shows this helpful information
+		--clean			retain only the last 2 iteration directories
 		--trim			trim data (we recommend to trim beforehand and feed MITObim with pre trimmed data)
 		--iontor		use data produced by iontorrent (experimental - default is illumina data)
+		--454			use 454 data (experimental - default is illumina data)
+		--mirapath <string>	full path to MIRA binaries (only needed if MIRA is not in PATH)
 		--proofread		applies proofreading (atm only to be used if starting the process from a single short seed reference)
 		--readlength <int>	read length of illumina library, default=150, needed for proofreading
 		--insert <int>		insert size of illumina library, default=300, needed for proofreading
@@ -48,23 +58,27 @@ my $USAGE = 	"\nusage: ./MITObim.pl <parameters>\n
 		./MITObim.pl -end 10 --quick reference.fasta -strain StrainY -ref reference-mt -readpool illumina_readpool.fastq\n";
 
 my $PROGRAM = "\nMITObim - mitochondrial baiting and iterative mapping\n";
-my $VERSION = "version 1.5\n";
+my $VERSION = "version 1.6\n";
 my $AUTHOR = "author: Christoph Hahn, (c) 2012-2013\n\n";
 
 GetOptions (	"start=i" => \$startiteration,
 		"end=i" => \$enditeration,
 		"quick=s" => \$quick,
 		"noshow!" => \$noshow,
+		"kbait=i" => \$k_bait,
 		"strainname=s" => \$strainname,
 		"paired" => \$paired,
 		"denovo" => \$mode,
 		"ref=s" => \$refname,
 		"readpool=s" => \$readpool,
+		"clean!" => \$clean,
 		"help!" => \$help,
 		"maf=s" => \$maf,
+		"mirapath=s" => \$mirapath,
 		"proofreading!" => \$proofreading,
 		"trim!" => \$trim,
 		"iontor!" => \$iontor,
+		"454!" => \$Roche454,
 		"readlength=i" => \$readlength,
 		"insertsize=i" => \$insertsize) or die "Incorrect usage!\n$USAGE";
 
@@ -105,6 +119,17 @@ unless (((-e $maf)||($quick)) && (-e $readpool)){
         print "\nAre readpool AND maf files there?\n";
         exit;
 }
+if ($mirapath){
+	if (-e "$mirapath/mira"){
+		print "found executables in the path specified by the user - good!\n";
+		$mira = "$mirapath/mira";
+		$convert_project = "$mirapath/convert_project";
+		$mirabait = "$mirapath/mirabait";
+	}else{
+		print "somethings wrong with the path to mira.\n";
+		exit 1;
+	}
+}
 ##if not given otherwise, readlength and insertsize are set to default. automatic readlength and insertsize detection will be implemented in time.
 if (!$readlength){
 	$readlength = 150;
@@ -126,6 +151,10 @@ if ($iontor){
 	$platform = "iontor";
 	$platform_settings = "IONTOR";
 }
+if ($Roche454){
+	$platform = "454";
+	$platform_settings = "454";
+}
 
 print "\nAll paramters seem to make sense:\n";
 print "startiteration: $startiteration\n";
@@ -140,7 +169,9 @@ print "denovo: $mode (mapping=0, denovo=1)\n";
 print "noshow: $noshow\n";
 print "proofread: $proofreading\n";
 print "read trimming: $trim (off=0, on=1)\n";
+print "kmer baiting: $k_bait\n";
 print "platform: $platform_settings\n";
+print "clean: $clean (off=0, on=1)\n";
 if ($proofreading){
 	print "readlength: $readlength\n";
 	print "insertsize: $insertsize\n";
@@ -153,7 +184,7 @@ my @iteration = ($startiteration .. $enditeration);
 foreach (@iteration){
 	chomp;
 	my $currentiteration = $_;
-	mkdir "iteration$currentiteration" or die $!;
+	mkdir "iteration$currentiteration" or die "MITObim will not overwrite an existing directory: iteration$currentiteration\nExit\n";
 	chdir "iteration$currentiteration" or die $!;
 	print "\n==============\n";
 	print " ITERATION $currentiteration\n";
@@ -166,8 +197,8 @@ foreach (@iteration){
 		
 	if ($maf){
 		print "\nrecover backbone by running convert_project on maf file\n";
+		@output= (`$convert_project -f maf -t fasta -A "$platform_settings\_SETTINGS -CO:fnicpst=yes" $maf tmp 2>&1`);
 
-		@output= (`convert_project -f maf -t fasta -A "$platform_settings\_SETTINGS -CO:fnicpst=yes" $maf tmp 2>&1`);
 		$exit = $? >> 8;
 		unless ($noshow){
 			print "@output\n";
@@ -196,9 +227,9 @@ foreach (@iteration){
 		copy("$quick", "$strainname-$refname\_backbone_in.fasta") or die "copy failed: $!";		
 	}
 	&check_ref_length("$strainname-$refname\_backbone_in.fasta","temp_baitfile.fasta",29800);
-	print "\nfishing readpool using mirabait\n";
-	
-	@output = (`mirabait -k 31 -n 1 temp_baitfile.fasta $readpool $strainname-$refname\_in.$platform 2>&1`);
+	print "\nfishing readpool using mirabait (k = $k_bait)\n\n";
+
+	@output = (`$mirabait -k $k_bait -n 1 temp_baitfile.fasta $readpool $strainname-$refname\_in.$platform 2>&1`);
 	$exit = $? >> 8;
 	unless ($noshow){
 		print "@output\n";
@@ -214,14 +245,17 @@ foreach (@iteration){
 		print "\nfind pairs to baited reads\n";
 		open(FH1,"<$strainname-$refname\_in.$platform.fastq") or die $!;
 		open(FH2,">list");
+		my $index=1;
+                while (<FH1>) {
+                        if ($index % 8 ==1 || $index % 8 ==5) {
+                                chomp;
+                                $_ =~ s/@//g;
+                                ($key, $val) = split /\//;
+                                $hash{$key} .= exists $hash{$key} ? ",$val" : $val;
+                        }
+                        $index++;
+                }
 
-		while (<FH1>) {
-			if ( ($_ =~ /^@|1$/) || ($_ =~ /^@|2$/)){
-				$_ =~ s/@//g;
-				($key, $val) = split /\//;
-		        	$hash{$key} .= exists $hash{$key} ? ",$val" : $val;
-			}
-		}
 		for (keys %hash){
 			$_ =~ s/$/\/1/g;
 			print FH2 "$_\n";
@@ -230,7 +264,7 @@ foreach (@iteration){
 		}
 		close(FH1);
 		close(FH2);
-		@output = (`convert_project -f fastq -t fastq -n list $readpool $strainname-$refname\_in.$platform 2>&1`);
+		@output = (`$convert_project -f fastq -t fastq -n list $readpool $strainname-$refname\_in.$platform 2>&1`);
 		$exit = $? >> 8;
 		unless ($noshow){
 			print "@output\n";
@@ -244,7 +278,7 @@ foreach (@iteration){
 	
 	MIRA:
 	print "\nrunning assembly using MIRA v3.4\n\n";
-	@output = (`mira --project=$strainname-$refname --job=$miramode,genome,accurate,$platform $trim_off -notraceinfo -MI:somrnl=0 -AS:nop=1 -SB:bsn=$refname:bft=fasta:bbq=30 $platform_settings\_SETTINGS -CO:msr=no -GE:uti=$paired $shme -SB:dsn=$strainname 2>&1`);
+	@output = (`$mira --project=$strainname-$refname --job=$miramode,genome,accurate,$platform $trim_off -notraceinfo -MI:somrnl=0 -AS:nop=1 -SB:bsn=$refname:bft=fasta:bbq=30 $platform_settings\_SETTINGS -CO:msr=no -GE:uti=$paired $shme -SB:dsn=$strainname 2>&1`);
 	$exit = $? >> 8;
 	unless ($noshow){
 		print "@output\n";
@@ -261,8 +295,12 @@ foreach (@iteration){
                 print "maf file is not there \n";
                 exit;
         }
-	$current_contiglength = &get_contig_length("$strainname-$refname\_assembly/$strainname-$refname\_d_info/$strainname-$refname\_info_contigstats.txt");
-	$current_number_of_reads = (&get_number_of_reads("$strainname-$refname\_assembly/$strainname-$refname\_d_info/$strainname-$refname\_info_contigstats.txt") - 1);
+        @current_contig_stats = &get_contig_stats("$strainname-$refname\_assembly/$strainname-$refname\_d_info/$strainname-$refname\_info_contigstats.txt");
+        if (((scalar @current_contig_stats > 3) || ($current_contig_stats[0] > 1)) && ($proofreading)) {
+                print "assembly consists of more than one contigs - this is atm not permitted in proofreading mode. Sorry!\n\n";
+                exit 1;
+        }
+
 
 	PROOFREAD:
 #	if (($proofreading) && ($currentiteration >= 1)){
@@ -283,7 +321,7 @@ foreach (@iteration){
 		close(OUT);	
 
 		print "\ngenerating proofread readpool\n";
-		@output = (`convert_project -f fastq -t fastq -n list $strainname-$refname\_in.$platform.fastq $strainname-$refname-proofread\_in.$platform 2>&1`);
+		@output = (`$convert_project -f fastq -t fastq -n list $strainname-$refname\_in.$platform.fastq $strainname-$refname-proofread\_in.$platform 2>&1`);
 		$exit = $? >> 8;
 		unless ($noshow){
 			print "@output\n";
@@ -295,7 +333,7 @@ foreach (@iteration){
 		copy("$strainname-$refname\_backbone_in.fasta", "$strainname-$refname-proofread\_backbone_in.fasta") or die "copy failed: $!";	
 
 		print "\nrunning proofread assembly using MIRA v3.4\n\n";
-        	@output = (`mira --project=$strainname-$refname-proofread --job=$miramode,genome,accurate,$platform $trim_off -notraceinfo -MI:somrnl=0 -AS:nop=1 -SB:bsn=$refname:bft=fasta:bbq=30 $platform_settings\_SETTINGS -CO:msr=no -GE:uti=yes:tismin=100:tismax=600 $shme -SB:dsn=$strainname 2>&1`);
+        	@output = (`$mira --project=$strainname-$refname-proofread --job=$miramode,genome,accurate,$platform $trim_off -notraceinfo -MI:somrnl=0 -AS:nop=1 -SB:bsn=$refname:bft=fasta:bbq=30 $platform_settings\_SETTINGS -CO:msr=no -GE:uti=yes:tismin=100:tismax=600 $shme -SB:dsn=$strainname 2>&1`);
         	$exit = $? >> 8;
         	unless ($noshow){
                 	print "@output\n";
@@ -312,28 +350,44 @@ foreach (@iteration){
 			print "maf file is not there \n";
 			exit;
 		}
-		$current_contiglength = &get_contig_length("$strainname-$refname-proofread_assembly/$strainname-$refname-proofread_d_info/$strainname-$refname-proofread_info_contigstats.txt");
-		$current_number_of_reads = (&get_number_of_reads("$strainname-$refname-proofread_assembly/$strainname-$refname-proofread_d_info/$strainname-$refname-proofread_info_contigstats.txt") - 1);
+		@current_contig_stats = &get_contig_stats("$strainname-$refname-proofread_assembly/$strainname-$refname-proofread_d_info/$strainname-$refname-proofread_info_contigstats.txt");
+                if ((scalar @current_contig_stats > 3) || ($current_contig_stats[0] > 1)){
+                        print "assembly consists of more than one contigs - this is atm not permitted in proofreading mode. Sorry!\n\n";
+                        exit 1;
+                }
+
 	}
-	if ($mode){
-		$current_number_of_reads++;
+        $current_number_of_contigs = shift @current_contig_stats;
+        $current_number_of_reads = shift @current_contig_stats;
+        if (!$mode){ #in mapping assemblies the reference is counted as one read
+                $current_number_of_reads -= $current_number_of_contigs;
+        }
+        push (@number_of_contigs, $current_number_of_contigs);
+        push (@number_of_reads, $current_number_of_reads);
+        print "readpool contains $current_number_of_reads reads\n";
+        print "assembly contains $current_number_of_contigs contig(s)\n";
+        if (scalar @current_contig_stats == 1){
+                print "contig length: $current_contig_stats[0]\n";
+        }elsif (scalar @current_contig_stats == 3){
+                print "min contig length: ".$current_contig_stats[0]." bp\nmax contig length: ".$current_contig_stats[1]." bp\navg contig length: ".sprintf("%.0f", $current_contig_stats[2])." bp\n";
+                print "find details on individual contigs in: ". abs_path . "/$strainname-$refname\_assembly/$strainname-$refname\_d_info/$strainname-$refname\_info_contigstats.txt\n";
+        }else {
+                print "somethings wrong with your contig stats. Sorry!\n";
+                exit 1;
+        }
+	if ($clean){
+		&clean($clean_interval, $currentiteration);
 	}
-	push (@number_of_reads, "$current_number_of_reads");
-	push (@contiglengths, "$current_contiglength");
-	print "readpool contains $current_number_of_reads reads\n";
-	print "contig length: $contiglengths[-1]\n";
-	if ($number_of_reads[-2]){
-		if ($number_of_reads[-2] == $number_of_reads[-1]){
-			print "\nMITObim has reached a stationary read number after $currentiteration iterations!!\n";
-			print strftime("%b %e %H:%M:%S", localtime) . "\n\n";
-			exit;
-		}
-	}
+        if ($number_of_reads[-2]){
+                if ($number_of_reads[-2] >= $number_of_reads[-1]){
+                        print "\nMITObim has reached a stationary read number after $currentiteration iterations!!\n$cite";
+                        print strftime("%b %e %H:%M:%S", localtime) . "\n\n";
+                        exit;
+                }
+        }
 	chdir ".." or die "Failed to go to parent directory: $!";
 }
-print "\nsuccessfully completed $enditeration iterations with MITObim! " . strftime("%b %e %H:%M:%S", localtime) . "
-\nif you found this program useful, please cite:
-Hahn C, Bachmann L & Chevreux B. Reconstructing mitochondrial genomes directly from genomic next-generation sequencing reads--a baiting and iterative mapping approach. Nucleic Acids Res. 2013; doi: 10.1093/nar/gkt371\n\n";
+print "\nsuccessfully completed $enditeration iterations with MITObim! " . strftime("%b %e %H:%M:%S", localtime) . "\n$cite";
 
 #
 #
@@ -342,30 +396,32 @@ Hahn C, Bachmann L & Chevreux B. Reconstructing mitochondrial genomes directly f
 #
 #
 
-sub get_contig_length{
-	my $contig = $_[0];
-	my @contiglength;
-	open (CONTIGSTATS,"<$contig") or die $!;
-	while (<CONTIGSTATS>){
-		unless ($_ =~ /#/){
-			@contiglength = split /\t/;
-		} 
-	}
-	close (CONTIGSTATS);		
-	return $contiglength[1];
-}
-
-sub get_number_of_reads{
-	my $contig = $_[0];
-	my @contigstats;
-	open (CONTIGSTATS,"<$contig") or die $!;
-	while (<CONTIGSTATS>){
-		unless ($_ =~ /#/){
-			@contigstats = split /\t/;
-		} 
-	}
-	close (CONTIGSTATS);		
-	return $contigstats[3];
+sub get_contig_stats{
+        my $contig = $_[0];
+        my @array;
+        my @contiglength;
+        my (@readnumber, @stats);
+        my $readssum = 0;
+        open (CONTIGSTATS,"<$contig") or die $!;
+        while (<CONTIGSTATS>){
+                unless ($_ =~ /#/){
+                        @array = split /\t/;
+                        push (@contiglength, $array[1]);
+                        push (@readnumber, $array[3]);
+                }
+        }
+        close (CONTIGSTATS);
+        if (scalar @readnumber == 1){
+                push (@stats, (scalar @readnumber, $readnumber[0], $contiglength[0])); #@stats contains: number of contigs, total number of reads used to build the contigs, length of contig
+        }
+        elsif (scalar @readnumber > 1){
+                $readssum += $_ for @readnumber;
+                my $minlength = min @contiglength;
+                my $maxlength = max @contiglength;
+                my @avglength = &standard_deviation(@contiglength);
+                push (@stats, (scalar @readnumber, $readssum, $minlength, $maxlength, $avglength[0])); #@stats contains: number of contigs, total number of reads used to build the contigs, minimal, maximal, avg length of contigs
+        }
+        return @stats;
 }
 
 sub proofread {
@@ -722,24 +778,33 @@ sub finalize_sequence{
         my $full_sequence=join("",@_);
         my $factor;
         my @output;
-	if (!$critical){
+        if (!$critical){
                 $factor=0;
         }else{
-                $factor=int(length ($full_sequence)/$critical);
+                $factor=ceil(length($full_sequence)/$critical);
         }
-        if ($factor <= 1){
+        if ($factor == 1){
                 push(@output,$header);
                 push(@output,$full_sequence);
         }else{ #too long
-		print "\nreference is too long for mirabait to be handled in one go -> will be split into sub-sequences\n";
-        	$header=substr $header, 1;
-                for (my $i=0; $i<=$factor;$i++){
+                print "\nreference is too long for mirabait to be handled in one go -> will be split into sub-sequences\n";
+                $header=substr $header, 1;
+                for (my $i=0; $i<$factor; $i++){
                         unless ((length(substr $full_sequence, $i*$critical, $critical+31)-31)<0){
-                                push(@output,">sub$i " .$header);
+                                push(@output,">sub$i\_" .$header);
                                 push(@output,substr $full_sequence, $i*$critical, $critical+31);
                         }
                 }
         }
         return @output;
 }
-
+sub clean {
+	my $interval = shift;
+	my $cur = shift;
+	my $dir = $cur-$interval;
+	my $path=abs_path;
+	if (-d "$path/../iteration$dir"){
+		print "\nnow removing directory iteration$dir\n";
+		rmtree ("$path/../iteration$dir") or die $!;
+	}
+}
