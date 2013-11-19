@@ -19,7 +19,7 @@ my $startiteration = 1;
 my $enditeration = 1;
 
 my ($quick, $noshow, $help, $strainname, $paired, $mode, $refname, $readpool, $maf, $proofreading, $readlength, $insertsize, $MM, $trim, $k_bait, $clean, $clean_interval) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 31, 0, 2);
-my ($miramode, $key, $val, $exit, $current_number_of_contigs, $current_contiglength, $current_number_of_reads, $iontor, $Roche454);
+my ($miramode, $key, $val, $exit, $current_number_of_contigs, $current_number_of_reads, $iontor, $Roche454);
 my $platform = "solexa";
 my $platform_settings = "SOLEXA";
 my $shme = "";
@@ -60,7 +60,10 @@ my $USAGE = 	"\nusage: ./MITObim.pl <parameters>\n
 my $PROGRAM = "\nMITObim - mitochondrial baiting and iterative mapping\n";
 my $VERSION = "version 1.6\n";
 my $AUTHOR = "author: Christoph Hahn, (c) 2012-2013\n\n";
-
+my $command = $0;
+for (@ARGV){
+	$command .= " $_";
+}
 GetOptions (	"start=i" => \$startiteration,
 		"end=i" => \$enditeration,
 		"quick=s" => \$quick,
@@ -81,7 +84,6 @@ GetOptions (	"start=i" => \$startiteration,
 		"454!" => \$Roche454,
 		"readlength=i" => \$readlength,
 		"insertsize=i" => \$insertsize) or die "Incorrect usage!\n$USAGE";
-
 
 print $PROGRAM; 
 print $VERSION; 
@@ -156,6 +158,7 @@ if ($Roche454){
 	$platform_settings = "454";
 }
 
+print "\nFull command run: $command\n";
 print "\nAll paramters seem to make sense:\n";
 print "startiteration: $startiteration\n";
 print "enditeration: $enditeration\n";
@@ -167,11 +170,11 @@ print "quick: $quick\n";
 print "paired: $paired\n";
 print "denovo: $mode (mapping=0, denovo=1)\n";
 print "noshow: $noshow\n";
-print "proofread: $proofreading\n";
 print "read trimming: $trim (off=0, on=1)\n";
 print "kmer baiting: $k_bait\n";
 print "platform: $platform_settings\n";
 print "clean: $clean (off=0, on=1)\n";
+print "proofread: $proofreading\n";
 if ($proofreading){
 	print "readlength: $readlength\n";
 	print "insertsize: $insertsize\n";
@@ -308,16 +311,15 @@ foreach (@iteration){
 		print "\n Proofreading\n\n";
 		my $contigreadlist = "$strainname-$refname\_assembly/$strainname-$refname\_d_info/$strainname-$refname\_info_contigreadlist.txt";
 		my $readtaglist = "$strainname-$refname\_assembly/$strainname-$refname\_d_info/$strainname-$refname\_info_readtaglist.txt";
-		
-#		print "assessing coverage in lower region from position 0 to 500\n";
+		print "assessing coverage between positions 0 and ".(2*$insertsize)." in current contig\n";
 		my @coverage_limits_lower = &assess_coverage($readtaglist, 0, (2*$insertsize), "lower");
-#		print "assessing coverage in upper region from position " . ($current_contiglength-500) . " to $current_contiglength\n";
-		my @coverage_limits_upper = &assess_coverage($readtaglist, ($current_contiglength - (2*$insertsize)), ($current_contiglength), "upper");
+		print "assessing coverage between positions ".($current_contig_stats[2] - (2*$insertsize))." and ".($current_contig_stats[2])." in current contig\n";
+		my @coverage_limits_upper = &assess_coverage($readtaglist, ($current_contig_stats[2] - (2*$insertsize)), ($current_contig_stats[2]), "upper");
 		
 		print "\nScreening orphan reads and discarding potentially dubious reads\n";	
 		open(OUT,">list");
 #		print OUT &proofread($contigreadlist, $contigreadlist_1MM);
-		print OUT &proofread($contigreadlist, $readtaglist, $current_contiglength, $coverage_limits_lower[0], $coverage_limits_lower[1], $coverage_limits_upper[0], $coverage_limits_upper[1], (1.3*$readlength), (2*$insertsize));	
+		print OUT &proofread($contigreadlist, $readtaglist, $current_contig_stats[2], $coverage_limits_lower[0], $coverage_limits_lower[1], $coverage_limits_upper[0], $coverage_limits_upper[1], (1.3*$readlength), (2*$insertsize), $noshow);	
 		close(OUT);	
 
 		print "\ngenerating proofread readpool\n";
@@ -436,7 +438,8 @@ sub proofread {
 #        my $lower_limit = 200;
 	my $lower_main_limit = $_[8];
 #	my $lower_main_limit = 500;
-        my $upper_limit = $contiglength - $lower_limit;
+    	my $verb = $_[9];
+	my $upper_limit = $contiglength - $lower_limit;
         my $upper_main_limit = $contiglength - $lower_main_limit;
 	my @readtaglist;
         my $ref;
@@ -465,11 +468,12 @@ sub proofread {
         my $max;
         my $tag;
 
-
-	print "\nlower limit: $lower_limit\n";
-        print "upper limit: $upper_limit\n";
-	print "lower main limit: $lower_main_limit\n";
-	print "upper main limit: $upper_main_limit\n\n";
+	unless ($verb){
+		print "\nlower limit: $lower_limit\n";
+        	print "upper limit: $upper_limit\n";
+		print "lower main limit: $lower_main_limit\n";
+		print "upper main limit: $upper_main_limit\n\n";
+	}
         open (TAGLIST,"<$readtaglist_FH") or die $!;
         while (<TAGLIST>){
                 push (@readtaglist, "$_");
@@ -528,7 +532,6 @@ sub proofread {
                 chomp;
                 @unsorted = ();
                 ($junk, $current_id) = split (/\t/);
-                print "current ID: $current_id\n";
                 @singleton = grep { $_ =~ /$current_id/} @total_readlist;
                 for (@singleton){
                         chomp;
@@ -543,24 +546,27 @@ sub proofread {
                         $min = min @unsorted;
                 }
 #                print "unsorted: @unsorted\n";
-		print "read mapping from $min to $max\n";
+		unless ($verb){
+	                print "current ID: $current_id\n";
+			print "read mapping from $min to $max\n";
 #                print "min: $min\n";
 #                print "max: $max\n";
 
-		if ($min <= $lower_limit){
-                        print "orphan discarded! min<lowerlimit\n----------------------------------------------\n";
-                }elsif ($max >= $upper_limit){
-			print "orphan discarded! max>upperlimit\n----------------------------------------------\n";
-		}elsif (($min >= $lower_main_limit) && ($max <= $upper_main_limit)){
-			print "orphan discarded! lower_main_limit<min-max<upper_main_limit\n----------------------------------------------\n";
-		}elsif (($min >= $elevated_cov_lower_start) && ($min <= $elevated_cov_lower_end - ($lower_limit / 2))){
-			print "orphan discarded! increased_coverage_lower_start<min<increased_coverage_lower_end\n----------------------------------------------\n";
-		}elsif (($max >= ($elevated_cov_upper_start + ($lower_limit / 2)))  && ($max <= $elevated_cov_upper_end)){
-			print "orphan discarded! increased_coverage_upper_start<max<increased_coverage_upper_end\n----------------------------------------------\n";
-		}else {
-                        push(@singletons, "@singleton\n");
-                        print "orphan resurrected! \n----------------------------------------------\n";
-                }
+			if ($min <= $lower_limit){
+	                        print "orphan discarded! min<lowerlimit\n----------------------------------------------\n";
+        	        }elsif ($max >= $upper_limit){
+				print "orphan discarded! max>upperlimit\n----------------------------------------------\n";
+			}elsif (($min >= $lower_main_limit) && ($max <= $upper_main_limit)){
+				print "orphan discarded! lower_main_limit<min-max<upper_main_limit\n----------------------------------------------\n";
+			}elsif (($min >= $elevated_cov_lower_start) && ($min <= $elevated_cov_lower_end - ($lower_limit / 2))){
+				print "orphan discarded! increased_coverage_lower_start<min<increased_coverage_lower_end\n----------------------------------------------\n";
+			}elsif (($max >= ($elevated_cov_upper_start + ($lower_limit / 2)))  && ($max <= $elevated_cov_upper_end)){
+				print "orphan discarded! increased_coverage_upper_start<max<increased_coverage_upper_end\n----------------------------------------------\n";
+			}else {
+        	                push(@singletons, "@singleton\n");
+                	        print "orphan resurrected! \n----------------------------------------------\n";
+	                }
+		}
 #                print "contiglength: $contiglength\n";
         }
 
@@ -638,7 +644,7 @@ sub assess_coverage{
 
         for (@readtaglist){
                 @taglist_line = split /\t/;
-                unless ($taglist_line[0] =~ /#/){
+		unless ($taglist_line[0] =~ /#/){
                         if ((($taglist_line[1] >= $from) && ($taglist_line[1] <= $to)) || (($taglist_line[2] >= $from) && ($taglist_line[2] <= $to))){
 				push (@coverage_array_lower, "$_");
                                 push (@read_ids_lower, $taglist_line[6]);
