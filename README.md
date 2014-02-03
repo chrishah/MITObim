@@ -266,7 +266,7 @@ for **MITObim 1.7**:
 MITObim reconstructs the mitchondrial genome in 82 (or less) iterations.
 
 For "well behaved" datasets the standard mapping assembly can be substituted by a _de novo_ assembly (--denovo flag). Utilizing read pair information (--paired flag) can further speed up the reconstruction if run in _de novo_ mode. This however will not decrease the nuber of necessary iterations in standard mapping mode.
-Test this strategy, like like so (*approximate runtime: 10 min*):
+Test this strategy, like so (*approximate runtime: 10 min*):
 
 	-bash-4.1$ mkdir tutorial3-denovo
 	-bash-4.1$ cd tutorial3-denovo
