@@ -186,7 +186,7 @@ The newly constructed reference is contained in the file "initial-mapping-testpo
 
 b. Baiting and iterative mapping using the MITObim.pl script: 
 
-Run the wrapper script as follows (standard output will be written into the file log):
+Run the wrapper script as follows (standard output will be written into the file log - *approximate runtime: 2 min*):
 
 for **MITObim 1.6**:
 
@@ -230,37 +230,55 @@ A fasta file containing the complete mitochondondrial genome of _T. thymallus_ c
 TUTORIAL II - direct reconstruction without prior mapping assembly using the --quick option
 -------------------------------------------------------------------------------------------
 This TUTORIAL illustrates the "quick & dirty" strategy that I usually use in a first test. To finish a mitochondrial genome it usually takes more iterations than TUTORIAL I above because the initial mapping assembly is less thorough. The **big** advantage is that the whole process can be run on a standard Desktop computer due to the substantial reduction in the number of reads to be dealt with already in the first iteration.
-Run the MITObim.pl script with the --quick option, providing a reference in fasta format:
+Run the MITObim.pl script with the --quick option, providing a reference in fasta format (*approximate runtime: 4 min*):
 
 	-bash-4.1$ mkdir tutorial2
 	-bash-4.1$ cd tutorial2
+
+for **MITObim 1.6**:
+
 	-bash-4.1$ /PATH/TO/MITObim.pl -start 1 -end 30 -strain testpool -ref Salpinus_mt_genome -readpool ~/PATH/TO/testdata1/Tthymallus-150bp-300sd50-interleaved.fastq --quick ~/PATH/TO/testdata1/Salpinus-mt-genome-NC_000861.fasta &> log
 
-You will find that with this approach MITObim will reconstruct the mitochondrial genome and reach a stationary number of mitochondrial reads only after 15 iterations. The result should nevertheless be equal to that obtained in TUTORIAL I and we were able to bypass the increased memory requirements of the initial MIRA mapping assembly.
+for **MITObim 1.7**:
+
+	-bash-4.1$ /PATH/TO/MITObim.pl -start 1 -end 30 -sample testpool -ref Salpinus_mt_genome -readpool ~/PATH/TO/testdata1/Tthymallus-150bp-300sd50-interleaved.fastq --quick ~/PATH/TO/testdata1/Salpinus-mt-genome-NC_000861.fasta &> log
+
+You will find that with this approach MITObim will reconstruct the mitochondrial genome and reach a stationary number of mitochondrial reads only after 15 (or less) iterations. The result should nevertheless be equal to that obtained in TUTORIAL I and we were able to bypass the increased memory requirements of the initial MIRA mapping assembly.
 
 **CONGRATULATIONS!!** ..but, there is more..
 
 TUTORIAL III - reconstructing mt genomes from mt barcode seeds
 --------------------------------------------------------------
 
-This tutorial reconstructs the mt genome of _T. thymallus_ solely using a partial mitochondrial COI sequence as starting seed.
+This tutorial reconstructs the mt genome of _T. thymallus_ solely using a partial mitochondrial COI sequence as starting seed. *NOTE* that we also use the new --clean option which tells MITObim to always only keep the latest two iteration directories to save space (*approximate runtime: 15 min*):
 
 	-bash-1.4$ mkdir tutorial3
 	-bash-1.4$ cd tutorial3
-	-bash-1.4$ ~/PATH/TO/MITObim.pl -strain testpool -ref Tthymallus-COI -readpool ~/PATH/TO/testdata1/Tthymallus-150bp-300sd50-interleaved.fastq --quick ~/PATH/TO/testdata1/Tthymallus-COI-partial-HQ961018.fasta -end 100 --noshow &> log
 
-MITObim reconstructs the mitchondrial genome in 82 iterations.
+for **MITObim 1.6**:
+
+	-bash-1.4$ ~/PATH/TO/MITObim.pl -strain testpool -ref Tthymallus-COI -readpool ~/PATH/TO/testdata1/Tthymallus-150bp-300sd50-interleaved.fastq --quick ~/PATH/TO/testdata1/Tthymallus-COI-partial-HQ961018.fasta -end 100 --noshow --clean &> log
+
+for **MITObim 1.7**:
+
+	-bash-1.4$ ~/PATH/TO/MITObim.pl -sample testpool -ref Tthymallus-COI -readpool ~/PATH/TO/testdata1/Tthymallus-150bp-300sd50-interleaved.fastq --quick ~/PATH/TO/testdata1/Tthymallus-COI-partial-HQ961018.fasta -end 100 --clean &> log
+
+MITObim reconstructs the mitchondrial genome in 82 (or less) iterations.
 
 For "well behaved" datasets the standard mapping assembly can be substituted by a _de novo_ assembly (--denovo flag). Utilizing read pair information (--paired flag) can further speed up the reconstruction if run in _de novo_ mode. This however will not decrease the nuber of necessary iterations in standard mapping mode.
-Test this strategy, like so:
+Test this strategy, like like so (*approximate runtime: 10 min*):
 
 	-bash-4.1$ mkdir tutorial3-denovo
 	-bash-4.1$ cd tutorial3-denovo
-	-bash-4.1$ ~/PATH/TO/MITObim.pl -strain testpool -ref Tthymallus-COI -readpool ~/PATH/TO/testdata1/Tthymallus-150bp-300sd50-interleaved.fastq --quick ~/PATH/TO/testdata1/Tthymallus-COI-partial-HQ961018.fasta -end 50 --noshow --denovo --paired &> log
 
-This strategy reconstructs the correct mitochondrial genome in only 31 iteration.
+for **MITObim 1.6**:
 
+	-bash-4.1$ ~/PATH/TO/MITObim.pl -strain testpool -ref Tthymallus-COI -readpool ~/PATH/TO/testdata1/Tthymallus-150bp-300sd50-interleaved.fastq --quick ~/PATH/TO/testdata1/Tthymallus-COI-partial-HQ961018.fasta -end 50 --noshow --denovo --paired --clean &> log
 
+for **MITObim 1.7**:
 
- 
+	-bash-4.1$ ~/PATH/TO/MITObim.pl -sample testpool -ref Tthymallus-COI -readpool ~/PATH/TO/testdata1/Tthymallus-150bp-300sd50-interleaved.fastq --quick ~/PATH/TO/testdata1/Tthymallus-COI-partial-HQ961018.fasta -end 50 --denovo --paired --clean &> log
+
+This strategy reconstructs the correct mitochondrial genome in only 31 (or less) iterations.
+
 
