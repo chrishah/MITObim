@@ -250,7 +250,7 @@ You will find that with this approach MITObim will reconstruct the mitochondrial
 TUTORIAL III - reconstructing mt genomes from mt barcode seeds
 --------------------------------------------------------------
 
-This tutorial reconstructs the mt genome of _T. thymallus_ solely using a partial mitochondrial COI sequence as starting seed. *NOTE* that we also use the new --clean option which tells MITObim to always only keep the latest two iteration directories to save space (*approximate runtime: 15 min*):
+This tutorial reconstructs the mt genome of _T. thymallus_ solely using a partial mitochondrial COI sequence as starting seed. *NOTE* that we also use the new --clean option which tells MITObim to always only keep the latest two iteration directories to save space (*approximate runtime: 20 min*):
 
 	-bash-1.4$ mkdir tutorial3
 	-bash-1.4$ cd tutorial3
