@@ -3,11 +3,15 @@ MITObim - mitochondrial baiting and iterative mapping
 
 
 
-VERSION
--------
-1.6
+VERSIONS
+--------
 
-Copyright Christoph Hahn 2012-2013
+1.6 (stable - relies on MIRA 3.4.1.1)
+
+1.7 (beta - relies on MIRA 4)
+
+
+Copyright Christoph Hahn 2012-2014
 
 CONTACT
 -------
@@ -17,7 +21,7 @@ Christoph Hahn <christoph.hahn@nhm.uio.no>
 INTRODUCTION
 ------------
 
-This document contains instructions on how to use the MITObim pipeline described in Hahn et al. 2013. The full article can be found at http://nar.oxfordjournals.org/content/early/2013/05/09/nar.gkt371.full. Kindly cite the article if you are using MITObim in your work. The pipeline is at the moment intended to be used with illumina data, but can be readily modified for the use with other platforms data (MITObim v1.6 experimentally enables the use of iontorrent and 454 data).
+This document contains instructions on how to use the MITObim pipeline described in Hahn et al. 2013. The full article can be found [here](http://nar.oxfordjournals.org/content/early/2013/05/09/nar.gkt371.full "MITObim full article at NAR"). Kindly cite the article if you are using MITObim in your work. The pipeline is at the moment intended to be used with illumina data, but the use of Iontorrent and 454 data has been enabled in the current versions.
 
 
 PREREQUISITES
@@ -25,12 +29,12 @@ PREREQUISITES
 
 - GNU utilities
 - Perl
-- A running version of MIRA v3.4.1.1 (http://sourceforge.net/projects/mira-assembler/files/MIRA/stable/) is required. An excellent guide to MIRA v3.4 is available at http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.html.
+- A running version of MIRA 3.4.1.1 (for the use with MITObim 1.6 - download [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/Older%20releases/V3.4.0/)) or MIRA 4 (for the use with MITObim 1.7 - download [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/stable/)) is required. An excellent guide to MIRA is available [here](http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.html "The definitive Guide to MIRA").
 
 COMMENT
 -------
 
-Version 1.6 will be the last to rely on MIRA v3.4.1.1. MITObim v1.7 (to be uploaded soon) will be compatible with MIRAv4.
+As I received many requests about enabling MITObim for MIRA 4 I decided to upload a beta version of MITObim 1.7. However, tHe proofreading option is at the moment disabled in this version and will be enabled once I got a chance to thoroughly test its behavior with MIRA 4. If you are planning to use the proofreading functunality please refer to MITObim 1.6 for the time being. SOrry for the inconvenience!
 
 
 General introduction to MITObim
@@ -45,11 +49,12 @@ For more details please refer to Hahn et al. 2013. Detailed examples are demonst
 TUTORIALS
 ---------
 
-The following tutorials are designed for users with little Unix and no previous MIRA experience. Tutorials I & II will demonstrate how to recover the complete mitochondrial genome of _Thymallus thymallus_ using the mitochondrial genome of _Salvelinus alpinus_ as a starting reference. Tutorial III achieves the same goal using solely a ~700 bp barcoding sequence as initial seed reference. For a "quick and dirty" exploration of your own data I recommend trying something along the lines of Tutorial II. Tutorial IV (to be added soon) uses a proofreading procedure to specifically reconstruct two mitochondrial genomes from a mixed sample containing genomic reads from two species. 
+The following tutorials are designed for users with little Unix and no previous MIRA experience. Tutorials I & II will demonstrate how to recover the complete mitochondrial genome of _Thymallus thymallus_ using the mitochondrial genome of _Salvelinus alpinus_ as a starting reference. Tutorial III achieves the same goal using solely a ~700 bp barcoding sequence as initial seed reference. For a "quick and dirty" exploration of your own data I recommend trying something along the lines of Tutorial II. Tutorial IV (to be added soon) uses a proofreading procedure to specifically reconstruct two mitochondrial genomes from a mixed sample containing genomic reads from two species. FOr convenience I always refer to MITObim.pl in the tutorials - The individual user will have to call the respective version of MITObim (e.g. MITObim_1.6.pl) during trying the tutorials. MITObim 1.7 might finish some of the tutorials with slighly less iterations than described in the tutorials. Dont worry! 
+
 
 Preparations:
 
-- download/compile MIRA 3.4.1.1 (http://sourceforge.net/projects/mira-assembler/files/MIRA/stable/). Precompiled binaries are available for linux. Help can be found at http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.htm. You ll need to put the directory containing the MIRA executables in your PATH (or tell MITObim were to find the MIRA binaries using the --mirapath option) in order to successfully use MITObim.pl.
+- download/compile MIRA (MIRA 3.4.1.1 for the use with MITObim 1.6 from [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/Older%20releases/V3.4.0/) or MIRA 4 for the use with MITObim 1.7 from [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/stable/). Precompiled binaries are available for Linux and OSX. Help can be found [here](http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.html "Definitive Guide to MIRA"). You ll need to put the directory containing the MIRA executables in your PATH (or tell MITObim were to find the MIRA binaries using the --mirapath option) in order to successfully use MITObim.pl.
 - download the MITObim wrapper script and the testdata from Github, e.g. download the entire MITObim repository as zip archive (use the button on the Github page) or use git on the command line (git clone --recursive git://github.com/chrishah/MITObim.git).
 - make the MITObim.pl executable (chmod a+x MITObim.pl) and extract the contents of the testdata archives (tar xvfz testdata?.tgz)
 
@@ -57,7 +62,7 @@ Test the wrapper script by doing:
 
 	-bash-4.1$ ~/PATH/TO/MITObim.pl
 
-which should display the usage:
+which should display the usage (NOTE: There have been small changes in the naming of parameters in MITObim 1.7):
 
 	usage ./MITObim.pl <parameters>
 
