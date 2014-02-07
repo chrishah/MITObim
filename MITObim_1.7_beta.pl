@@ -232,7 +232,7 @@ foreach (@iteration){
 	if ($maf){
 		print "\nrecover backbone by running miraconvert on maf file\n\n";
 
-		@output= (`miraconvert -f maf -t fasta -A "$platform_settings\_SETTINGS -CO:fnicpst=yes" $maf tmp 2>&1`);
+		@output= qx($miraconvert -f maf -t fasta -A "$platform_settings\_SETTINGS -CO:fnicpst=yes" $maf tmp);
 		$exit = $? >> 8;
 		unless (!$noshow){
 			print "@output\n";
@@ -267,7 +267,7 @@ foreach (@iteration){
 	print "\nfishing readpool using mirabait (k = $k_bait)\n\n";
 	
 #	@output = (`mirabait -k $k_bait -n 1 temp_baitfile.fasta $readpool $strainname-$refname\_in.$platform 2>&1`);
-	@output = (`mirabait -k $k_bait -n 1 temp_baitfile.fasta $readpool $strainname-readpool-it$currentiteration 2>&1`);
+	@output = qx($mirabait -k $k_bait -n 1 temp_baitfile.fasta $readpool $strainname-readpool-it$currentiteration);
 	$exit = $? >> 8;
 	unless (!$noshow){
 		print "@output\n";
@@ -315,7 +315,7 @@ foreach (@iteration){
 		close(FH1);
 		close(FH2);
 #		@output = (`miraconvert -f fastq -t fastq -n list $readpool $strainname-$refname\_in.$platform 2>&1`);
-		@output = (`miraconvert -f fastq -t fastq -n list $readpool $strainname-readpool-it$currentiteration 2>&1`);
+		@output = qx($miraconvert -f fastq -t fastq -n list $readpool $strainname-readpool-it$currentiteration );
 		$exit = $? >> 8;
 		unless (!$noshow){
 			print "@output\n";
@@ -333,7 +333,7 @@ foreach (@iteration){
 	MIRA:
 	print "\nrunning $miramode assembly using MIRA\n\n";
 	&create_manifest($currentiteration,$strainname,$refname,$miramode,$trim_off,$platform_settings,$shme,$paired,$trimoverhang,"$strainname-readpool-it$currentiteration.fastq","backbone_it$currentiteration\_initial_$refname.fna");
-	@output = (`mira manifest.conf 2>&1`); 
+	@output = qx($mira manifest.conf ); 
 
 #--project=$strainname-$refname --job=$miramode,genome,accurate,$platform $trim_off -notraceinfo -MI:somrnl=0 -AS:nop=1 -SB:bsn=$refname:bft=fasta:bbq=30 $platform_settings\_SETTINGS -CO:msr=no -GE:uti=$paired $shme -SB:dsn=$strainname 2>&1`);
 	$exit = $? >> 8;
