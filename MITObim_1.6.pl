@@ -252,8 +252,13 @@ foreach (@iteration){
                 while (<FH1>) {
                         if ($index % 8 ==1 || $index % 8 ==5) {
                                 chomp;
-                                $_ =~ s/@//g;
-                                ($key, $val) = split /\//;
+				$_ =~ s/@//g;
+				if ($_ =~ /\/[0-9]$/){
+	                                ($key, $val) = split /\//;
+				}else {
+					print "\nYou have chosen to use the paired option in MITObim.\nTo successfully identify read pairing, MITObim 1.6 expects the read headers in the following format:\ne.g.\n	\@HWUSI-EAS100R:6:73:941:1973#0/1\n	\@HWUSI-EAS100R:6:73:941:1973#0/2\n\n";
+					exit;
+				}
                                 $hash{$key} .= exists $hash{$key} ? ",$val" : $val;
                         }
                         $index++;
