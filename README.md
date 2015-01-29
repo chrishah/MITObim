@@ -34,13 +34,13 @@ PREREQUISITES
 COMMENT
 -------
 
-As I received many requests about enabling MITObim for MIRA 4 I decided to upload a beta version of MITObim 1.7. However, tHe proofreading option is at the moment disabled in this version and will be enabled once I got a chance to thoroughly test its behavior with MIRA 4. If you are planning to use the proofreading functunality please refer to MITObim 1.6 for the time being. SOrry for the inconvenience!
+As I received many requests about enabling MITObim for MIRA 4 I decided to upload a beta version of MITObim 1.7. However, the proofreading option is at the moment disabled in this version and will be enabled once I got a chance to thoroughly test its behavior with MIRA 4. If you are planning to use the proofreading functunality please refer to MITObim 1.6 for the time being. Sorry for the inconvenience!
 
 
 General introduction to MITObim
 -------------------------------
 
-The MITObim procedure (mitochondrial baiting and iterative mapping) represents a highly efficient approach to assembling novel mitochondrial genomes of non-model organisms directly from total genomic DNA derived NGS reads. Labor intensive long-range PCR steps prior to sequencing are no longer required. MITObim is capable of reconstructing mitochondrial genomes without the need of a reference genome of the targeted species by relying solely on (a) mitochondrial genome information of more distantly related taxa or (b) short mitochondrial barcoding sequences (seeds), such as the commonly used cytochochrome-oxidase subunit 1 (COI), as a starting reference. 
+The MITObim procedure (mitochondrial baiting and iterative mapping) represents a highly efficient approach to assembling novel mitochondrial genomes of non-model organisms directly from total genomic DNA derived NGS reads. Labor intensive long-range PCR steps prior to sequencing are no longer required. MITObim is capable of reconstructing mitochondrial genomes without the need of a reference genome of the targeted species by relying solely on (a) mitochondrial genome information of more distantly related taxa or (b) short mitochondrial barcoding sequences (seeds), such as the commonly used cytochrome-oxidase subunit 1 (COI), as a starting reference. 
 
 The script is performing three steps and iteratively repeating them: (i) Deriving reference sequence from previous mapping assembly, (ii) in silico baiting using the newly derived reference (iii) previously fished reads are mapped to the newly derived reference leading to an extension of the reference sequence.
 For more details please refer to [Hahn et al. 2013](http://nar.oxfordjournals.org/content/early/2013/05/09/nar.gkt371.full "MITObim full article at NAR"). Detailed examples are demonstrated in the TUTORIALS section below.
@@ -49,7 +49,7 @@ For more details please refer to [Hahn et al. 2013](http://nar.oxfordjournals.or
 TUTORIALS
 ---------
 
-The following tutorials are designed for users with little Unix and no previous MIRA experience. Tutorials I & II will demonstrate how to recover the complete mitochondrial genome of _Thymallus thymallus_ using the mitochondrial genome of _Salvelinus alpinus_ as a starting reference. Tutorial III achieves the same goal using solely a ~700 bp barcoding sequence as initial seed reference. For a "quick and dirty" exploration of your own data I recommend trying something along the lines of Tutorial II. Tutorial IV (to be added soon) uses a proofreading procedure to specifically reconstruct two mitochondrial genomes from a mixed sample containing genomic reads from two species. FOr convenience I always refer to MITObim.pl in the tutorials - The individual user will have to call the respective version of MITObim (e.g. MITObim_1.6.pl) during trying the tutorials. MITObim 1.7 might finish some of the tutorials with slighly less iterations than described in the tutorials. Dont worry! 
+The following tutorials are designed for users with little Unix and no previous MIRA experience. Tutorials I & II will demonstrate how to recover the complete mitochondrial genome of _Thymallus thymallus_ using the mitochondrial genome of _Salvelinus alpinus_ as a starting reference. Tutorial III achieves the same goal using solely a ~700 bp barcoding sequence as initial seed reference. For a "quick and dirty" exploration of your own data I recommend trying something along the lines of Tutorial II. Tutorial IV (to be added soon) uses a proofreading procedure to specifically reconstruct two mitochondrial genomes from a mixed sample containing genomic reads from two species. For convenience I always refer to MITObim.pl in the tutorials - The individual user will have to call the respective version of MITObim (e.g. MITObim_1.6.pl) during trying the tutorials. MITObim 1.7 might finish some of the tutorials with slighly less iterations than described in the tutorials. Dont worry! 
 
 
 Preparations:
