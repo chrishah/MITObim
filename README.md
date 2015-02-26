@@ -8,10 +8,10 @@ VERSIONS
 
 1.6 (stable - relies on MIRA 3.4.1.1)
 
-1.7 (beta - relies on MIRA 4)
+1.8 (relies on MIRA 4)
 
 
-Copyright Christoph Hahn 2012-2014
+Copyright Christoph Hahn 2012-2015
 
 CONTACT
 -------
@@ -29,12 +29,26 @@ PREREQUISITES
 
 - GNU utilities
 - Perl
-- A running version of MIRA 3.4.1.1 (for the use with MITObim 1.6 - download [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/Older%20releases/V3.4.0/)) or MIRA 4 (for the use with MITObim 1.7 - download [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/stable/)) is required. An excellent guide to MIRA is available [here](http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.html "The definitive Guide to MIRA").
+- A running version of MIRA 3.4.1.1 (for the use with MITObim 1.6 - download [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/Older%20releases/V3.4.0/)) or MIRA 4 (for the use with MITObim 1.8 - download [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/stable/)) is required. Precompiled binaries for MIRA are available for Linux and OSX. An excellent guide to MIRA is available [here](http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.html "The definitive Guide to MIRA").
+
+As an *alternative*, I have generated a [docker](https://www.docker.com/) image for MITObim (see [here](https://registry.hub.docker.com/u/chrishah/mitobim/)). Find out what docker is [here](https://www.docker.com/whatisdocker/). The MITObim image contains a stripped down version of Ubuntu 14.04 and all necessary executables and dependencies to run MITObim. Docker is compatible with all major operating systems, including Mac OSX and Windows (see [here](https://docs.docker.com/installation/#installation)). The MITObim image has been tested on Ubuntu, but it should work without problem in any other system where docker was successfully installed. 
+
+To install docker on ubuntu should be as easy as:
+```bash
+sudo apt-get install docker.io
+```
+You can then specify a working directory on your machine that will be synced with the `/home/data` directory in the image and enter the self contained shell environment to run MITObim:
+```bash
+WORKING_DIR=/your/desired/working/dir
+sudo docker run -i -t -v $WORKING_DIR/:/home/data chrishah/mitobim /bin/bash
+```
+*NOTE* that the first startup may take a couple of minutes because the above command will first download the image from [docker hub](https://registry.hub.docker.com/u/chrishah/mitobim/)). Subsequent launches will take only seconds. 
+
 
 COMMENT
 -------
 
-As I received many requests about enabling MITObim for MIRA 4 I decided to upload a beta version of MITObim 1.7. However, tHe proofreading option is at the moment disabled in this version and will be enabled once I got a chance to thoroughly test its behavior with MIRA 4. If you are planning to use the proofreading functunality please refer to MITObim 1.6 for the time being. SOrry for the inconvenience!
+The proofreading option described in the paper is at the moment disabled in MITObim 1.8 and will be enabled once I got a chance to thoroughly test its behavior with MIRA 4. If you are planning to use the proofreading functunality please refer to MITObim 1.6 for the time being. Sorry for the inconvenience!
 
 
 General introduction to MITObim
@@ -49,50 +63,58 @@ For more details please refer to [Hahn et al. 2013](http://nar.oxfordjournals.or
 TUTORIALS
 ---------
 
-The following tutorials are designed for users with little Unix and no previous MIRA experience. Tutorials I & II will demonstrate how to recover the complete mitochondrial genome of _Thymallus thymallus_ using the mitochondrial genome of _Salvelinus alpinus_ as a starting reference. Tutorial III achieves the same goal using solely a ~700 bp barcoding sequence as initial seed reference. For a "quick and dirty" exploration of your own data I recommend trying something along the lines of Tutorial II. Tutorial IV (to be added soon) uses a proofreading procedure to specifically reconstruct two mitochondrial genomes from a mixed sample containing genomic reads from two species. FOr convenience I always refer to MITObim.pl in the tutorials - The individual user will have to call the respective version of MITObim (e.g. MITObim_1.6.pl) during trying the tutorials. MITObim 1.7 might finish some of the tutorials with slighly less iterations than described in the tutorials. Dont worry! 
+The following tutorials are designed for users with little Unix and no previous MIRA experience. Tutorials I & II will demonstrate how to recover the complete mitochondrial genome of _Thymallus thymallus_ using the mitochondrial genome of _Salvelinus alpinus_ as a starting reference. Tutorial III achieves the same goal using solely a ~700 bp barcoding sequence as initial seed reference. For a quick exploration of your own data I recommend trying something along the lines of Tutorial II. Tutorial IV (to be added soon) uses a proofreading procedure to specifically reconstruct two mitochondrial genomes from a mixed sample containing genomic reads from two species. FOr convenience I always refer to MITObim.pl in the tutorials - The individual user will have to call the respective version of MITObim (e.g. MITObim_1.6.pl) during trying the tutorials. MITObim 1.7 (and newer) might finish some of the tutorials with slighly less iterations than described in the tutorials. Dont worry! 
 
 
 Preparations:
 
-- download/compile MIRA (MIRA 3.4.1.1 for the use with MITObim 1.6 from [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/Older%20releases/V3.4.0/) or MIRA 4 for the use with MITObim 1.7 from [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/stable/)). Precompiled binaries are available for Linux and OSX. Help can be found [here](http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.html "Definitive Guide to MIRA"). You ll need to put the directory containing the MIRA executables in your PATH in order to successfully use MITObim.pl. If you can't or won't do that you can also tell MITObim where to find the correct MIRA binaries via the --mirapath option.
+- download MIRA (MIRA 4 for the use with MITObim 1.7 (and newer) from [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/stable/) or MIRA 3.4.1.1 for the use with MITObim 1.6 from [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/Older%20releases/V3.4.0/). *Precompiled* binaries are available for Linux and OSX. Help can be found [here](http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.html "Definitive Guide to MIRA"). You ll need to put the directory containing the MIRA executables in your PATH in order to successfully use MITObim.pl. If you can't or won't do that you can also tell MITObim where to find the correct MIRA binaries via the --mirapath option.
 - download the MITObim wrapper script and the testdata from Github, e.g. download the entire MITObim repository as zip archive (use the button on the Github page) or use git on the command line (git clone --recursive git://github.com/chrishah/MITObim.git).
-- make the MITObim.pl executable (chmod a+x MITObim.pl) and extract the contents of the testdata archives (tar xvfz testdata?.tgz)
+- make the MITObim.pl executable (chmod a+x MITObim.pl) and extract the contents of the testdata archives (tar xvfz testdata1.tgz)
+
+-*or* just fire up the self-contained docker image.
 
 Test the wrapper script by doing:
 
 	-bash-4.1$ ~/PATH/TO/MITObim.pl
 
-which should display the usage (NOTE: In MITObim 1.7 the -strain flag has been renamed to -sample):
+which should display the usage (NOTE: From MITObim 1.7 onwards the -strain flag has been renamed to -sample), e.g.:
+```bash
+MITObim - mitochondrial baiting and iterative mapping
+version 1.8
+author: Christoph Hahn, (c) 2012-2015
 
-	usage ./MITObim.pl <parameters>
-
-	parameters:
-
-                -start <int>            iteration to start with, default=1
-                -end <int>              iteration to end with, default=1
-                -strain <string>        strainname as used in initial MIRA assembly
-                -ref <string>           referencename as used in initial MIRA assembly
-                -readpool <FILE>        readpool in fastq format
-                -maf <FILE>             maf file from previous MIRA assembly
-
-	optional:
-                --quick <FILE>          starts process with initial baiting using provided fasta reference
-                --kbait <int>           set kmer for baiting stringency (default: 31)
-                --denovo                runs MIRA in denovo mode, default: mapping
-                --pair                  finds pairs after baiting (relies on /1 and /2 ID convention for read pairs), default: no
-                --help                  shows this helpful information
-                --clean                 retain only the last 2 iteration directories
-                --trim                  trim data (we recommend to trim beforehand and feed MITObim with pre trimmed data)
-                --iontor                use data produced by iontorrent (experimental - default is illumina data)
-                --454                   use 454 data (experimental - default is illumina data)
-                --mirapath <string>     full path to MIRA binaries (only needed if MIRA is not in PATH)
-                --proofread             applies proofreading (atm only to be used if starting the process from a single short seed reference)
-                --readlength <int>      read length of illumina library, default=150, needed for proofreading
-                --insert <int>          insert size of illumina library, default=300, needed for proofreading
-	examples:
-                ./MITObim.pl -start 1 -end 5 -strain StrainX -ref reference-mt -readpool illumina_readpool.fastq -maf initial_assembly.maf
-                ./MITObim.pl -end 10 --quick reference.fasta -strain StrainY -ref reference-mt -readpool illumina_readpool.fastq
-
+usage: ./MITObim.pl <parameters>
+	 	
+parameters:
+		-start <int>		iteration to start with, default=1
+		-end <int>		iteration to end with, default=1
+		-sample <string>	sampleID as used in initial MIRA assembly
+		-ref <string>		referenceID as used in initial MIRA assembly
+		-readpool <FILE>	readpool in fastq format (*.gz is also allowed)
+		-maf <FILE>		maf file from previous MIRA assembly
+		
+optional:
+		--quick <FILE>		starts process with initial baiting using provided fasta reference
+		--kbait <int>		set kmer for baiting stringency (default: 31)
+		--denovo		runs MIRA in denovo mode (default: mapping)
+		--pair			finds pairs after baiting (relies on /1 and /2 header convention for read pairs) (default: no)
+		--verbose		show detailed output of MIRA modules (default: no)
+		--split			split reference at positions with more than 5N (default: no)
+		--help			shows this helpful information
+		--clean                 retain only the last 2 iteration directories (default: no)
+		--trimreads		trim data (default: no; we recommend to trim beforehand and feed MITObim with pre trimmed data)
+		--trimoverhang		trim overhang up- and downstream of reference (default: no)
+		--missmatch <int>	number of allowed missmatches in mapping - only for illumina data (default: 15% of avg. read length)
+		--min_cov <int>		minimum average coverage of contigs to be retained (default: off)
+		--mirapath <string>     full path to MIRA binaries (only needed if MIRA is not in PATH)
+		--iontor		use iontorrent data (experimental - default is illumina data)
+		--454			use 454 data (experimental - default is illumina data)
+		
+examples:
+		./MITObim.pl -start 1 -end 5 -sample StrainX -ref reference-mt -readpool illumina_readpool.fastq -maf initial_assembly.maf
+		./MITObim.pl -end 10 --quick reference.fasta -sample StrainY -ref reference-mt -readpool illumina_readpool.fastq
+```
 
 The archive testdata1 contains three files:
 
@@ -117,7 +139,7 @@ Create a directory to work in and change into this directory:
 
 **mapping assembly with MIRA 3.4.1.1:**
 
-MIRA 3.4.1.1 expects certain files to be present in your working directory, which are named according to the name of your MIRA project and certain conventions. Let's say the project name of your choice for the initial mapping assembly is "initial-mapping-testpool-to-Salpinus-mt". One could either simply copy and rename the files accordingly in your working directory or create symbolic links in the current working directory pointing to the actual files (replace "cp" with "ln -s" in the following command). 
+MIRA 3.4.1.1 expects certain files to be present in your working directory, which are named according to the name of your MIRA project and certain conventions. Let's say the project name of your choice for the initial mapping assembly is `initial-mapping-testpool-to-Salpinus-mt`. One could either simply copy and rename the files accordingly in your working directory or create symbolic links in the current working directory pointing to the actual files (replace "cp" with "ln -s" in the following command). 
   
 	-bash-4.1$ cp /PATH/TO/testdata1/Tthymallus-150bp-300sd50-interleaved.fastq initial-mapping-testpool-to-Salpinus-mt_in.solexa.fastq 
 	-bash-4.1$ cp /PATH/TO/testdata1/Salpinus-mt-genome-NC_000861.fasta initial-mapping-testpool-to-Salpinus-mt_backbone_in.fasta
@@ -130,16 +152,16 @@ or
 
 **mapping assembly with MIRA 4:**
 
-MIRA 4 does not depend on the naming conventions of MIRA 3.4 any more. MIRA 4 uses a so called manifest file in which you can specifiy the paths to your data (see below). Let us for the sake of this example create symbolic links, nevertheless. *NOTE* that we change the extension of the reference fasta file to *.fa. The reason is that MIRA will per default expect quality data for files with the extension *.fasta. The file extension *.fa tells MIRA to continue even without quality data.  
+MIRA 4 does not depend on the naming conventions of MIRA 3.4 any more. MIRA 4 uses a so called manifest file in which you can specifiy the paths to your data (see below). Let us for the sake of this example create symbolic links, nevertheless. *NOTE* that we change the extension of the reference fasta file to `*.fa`. The reason is that MIRA will per default expect quality data for files with the extension `*.fasta`. The file extension `*.fa` tells MIRA to continue even without quality data.  
 
 	-bash-4.1$ ln -s /PATH/TO/testdata1/Tthymallus-150bp-300sd50-interleaved.fastq reads.fastq 
 	-bash-4.1$ ln -s /PATH/TO/testdata1/Salpinus-mt-genome-NC_000861.fasta reference.fa
 	
-create a manifest file (named manifest.conf) specifying the parameters for your MIRA assembly (see section 3.4 [here](http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.html "Definitive Guide to MIRA") for details) in your favourite text editor or just type (or copy and paste) the following command:
+create a manifest file (named e.g. `manifest.conf`) specifying the parameters for your MIRA assembly (see section 3.4 [here](http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.html "Definitive Guide to MIRA") for details) in your favourite text editor or just type (or copy and paste) the following command:
 
 	-bash-4.1$ echo -e "\n#manifest file for basic mapping assembly with illumina data using MIRA 4\n\nproject = initial-mapping-testpool-to-Salpinus-mt\n\njob=genome,mapping,accurate\n\nparameters = -NW:mrnl=0 -AS:nop=1 SOLEXA_SETTINGS -CO:msr=no\n\nreadgroup\nis_reference\ndata = reference.fa\nstrain = Salpinus-mt-genome\n\nreadgroup = reads\ndata = reads.fastq\ntechnology = solexa\nstrain = testpool\n" > manifest.conf
 
-Whatever you do, the manifest.conf file should eventually look as follows:
+Whatever you do, the manifest.conf file should eventually look more or less as follows:
 
 	-bash-4.1$ head -n 20 manifest.conf
 
@@ -192,7 +214,7 @@ for **MITObim 1.6**:
 
 	-bash-4.1$ /PATH/TO/MITObim.pl -start 1 -end 10 -strain testpool -ref Salpinus_mt_genome -readpool initial-mapping-testpool-to-Salpinus-mt_in.solexa.fastq -maf initial-mapping-testpool-to-Salpinus-mt_assembly/initial-mapping-testpool-to-Salpinus-mt_d_results/initial-mapping-testpool-to-Salpinus-mt_out.maf &> log
 
-for **MITObim 1.7**:
+for **MITObim 1.7 and later**:
 
 	-bash-4.1$ /PATH/TO/MITObim.pl -start 1 -end 10 -sample testpool -ref Salpinus_mt_genome -readpool reads.fastq -maf initial-mapping-testpool-to-Salpinus-mt_assembly/initial-mapping-testpool-to-Salpinus-mt_d_results/initial-mapping-testpool-to-Salpinus-mt_out.maf &> log
 
@@ -229,7 +251,7 @@ A fasta file containing the complete mitochondondrial genome of _T. thymallus_ c
 
 TUTORIAL II - direct reconstruction without prior mapping assembly using the --quick option
 -------------------------------------------------------------------------------------------
-This TUTORIAL illustrates the "quick & dirty" strategy that I usually use in a first test. To finish a mitochondrial genome it usually takes more iterations than TUTORIAL I above because the initial mapping assembly is less thorough. The **big** advantage is that the whole process can be run on a standard Desktop computer due to the substantial reduction in the number of reads to be dealt with already in the first iteration.
+This TUTORIAL illustrates the quick strategy that I usually use in a first test. It bypasses the intial mapping assembly required in TUTORIAL I, i.e. you only need a reference in fasta format and you reads. To finish a mitochondrial genome it usually takes more iterations than TUTORIAL I above because the initial mapping assembly is less thorough. The **big** advantage is that the whole process can be run on a standard Desktop computer due to the substantial reduction in the number of reads to be dealt with already in the first iteration.
 Run the MITObim.pl script with the --quick option, providing a reference in fasta format (*approximate runtime: 4 min*):
 
 	-bash-4.1$ mkdir tutorial2
@@ -239,7 +261,7 @@ for **MITObim 1.6**:
 
 	-bash-4.1$ /PATH/TO/MITObim.pl -start 1 -end 30 -strain testpool -ref Salpinus_mt_genome -readpool ~/PATH/TO/testdata1/Tthymallus-150bp-300sd50-interleaved.fastq --quick ~/PATH/TO/testdata1/Salpinus-mt-genome-NC_000861.fasta &> log
 
-for **MITObim 1.7**:
+for **MITObim 1.7i and later**:
 
 	-bash-4.1$ /PATH/TO/MITObim.pl -start 1 -end 30 -sample testpool -ref Salpinus_mt_genome -readpool ~/PATH/TO/testdata1/Tthymallus-150bp-300sd50-interleaved.fastq --quick ~/PATH/TO/testdata1/Salpinus-mt-genome-NC_000861.fasta &> log
 
@@ -259,7 +281,7 @@ for **MITObim 1.6**:
 
 	-bash-1.4$ ~/PATH/TO/MITObim.pl -strain testpool -ref Tthymallus-COI -readpool ~/PATH/TO/testdata1/Tthymallus-150bp-300sd50-interleaved.fastq --quick ~/PATH/TO/testdata1/Tthymallus-COI-partial-HQ961018.fasta -end 100 --noshow --clean &> log
 
-for **MITObim 1.7**:
+for **MITObim 1.7 and later**:
 
 	-bash-1.4$ ~/PATH/TO/MITObim.pl -sample testpool -ref Tthymallus-COI -readpool ~/PATH/TO/testdata1/Tthymallus-150bp-300sd50-interleaved.fastq --quick ~/PATH/TO/testdata1/Tthymallus-COI-partial-HQ961018.fasta -end 100 --clean &> log
 
@@ -275,7 +297,7 @@ for **MITObim 1.6**:
 
 	-bash-4.1$ ~/PATH/TO/MITObim.pl -strain testpool -ref Tthymallus-COI -readpool ~/PATH/TO/testdata1/Tthymallus-150bp-300sd50-interleaved.fastq --quick ~/PATH/TO/testdata1/Tthymallus-COI-partial-HQ961018.fasta -end 50 --noshow --denovo --paired --clean &> log
 
-for **MITObim 1.7**:
+for **MITObim 1.7 and later**:
 
 	-bash-4.1$ ~/PATH/TO/MITObim.pl -sample testpool -ref Tthymallus-COI -readpool ~/PATH/TO/testdata1/Tthymallus-150bp-300sd50-interleaved.fastq --quick ~/PATH/TO/testdata1/Tthymallus-COI-partial-HQ961018.fasta -end 50 --denovo --paired --clean &> log
 
