@@ -5,7 +5,7 @@ MAINTAINER Christoph Hahn <chrisi.hahni@gmail.com>
 RUN apt-get update
 RUN apt-get upgrade -y
 
-# Not essential, but wise to set the lang
+# Not essential, but wise to set the lang (taken from szitenberg/reprophylo)
 RUN apt-get install -y language-pack-en
 ENV LANGUAGE en_US.UTF-8
 ENV LANG en_US.UTF-8
