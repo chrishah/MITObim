@@ -72,14 +72,14 @@ Preparations:
 - download the MITObim wrapper script and the testdata from Github, e.g. download the entire MITObim repository as zip archive (use the button on the Github page) or use git on the command line (`git clone --recursive git://github.com/chrishah/MITObim.git`).
 - make the MITObim.pl executable (`chmod a+x MITObim.pl`) and extract the contents of the testdata archives (`tar xvfz testdata1.tgz`)
 
-- **OR** just fire up the self-contained docker image.
+- **OR** just fire up the self-contained docker image (see prerequisites above).
 
 Test the wrapper script by doing:
 
 	-bash-4.1$ ~/PATH/TO/MITObim.pl
 
 which should display the usage (NOTE: From MITObim 1.7 onwards the `-strain` flag has been renamed to `-sample`), e.g.:
-```bash
+```
 MITObim - mitochondrial baiting and iterative mapping
 version 1.8
 author: Christoph Hahn, (c) 2012-2015
