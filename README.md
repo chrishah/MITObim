@@ -31,7 +31,7 @@ PREREQUISITES
 - Perl
 - A running version of MIRA 3.4.1.1 (for the use with MITObim 1.6 - download [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/Older%20releases/V3.4.0/)) or MIRA 4 (for the use with MITObim 1.8 - download [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/stable/)) is required. Precompiled binaries for MIRA are available for Linux and OSX. An excellent guide to MIRA is available [here](http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.html "The definitive Guide to MIRA").
 
-As an *alternative*, I have generated a [docker](https://www.docker.com/) image for MITObim (see [here](https://registry.hub.docker.com/u/chrishah/mitobim/)). Find out what docker is [here](https://www.docker.com/whatisdocker/). The MITObim image contains a stripped down version of Ubuntu 14.04 and all necessary executables and dependencies to run MITObim. Docker is compatible with all major operating systems, including Mac OSX and Windows (see [here](https://docs.docker.com/installation/#installation)). The MITObim image has been tested on Ubuntu, but it should work without problem in any other system where docker was successfully installed. 
+As an **alternative**, I have generated a [docker](https://www.docker.com/) image for MITObim (see [here](https://registry.hub.docker.com/u/chrishah/mitobim/)). Find out what docker is [here](https://www.docker.com/whatisdocker/). The MITObim image contains a stripped down version of Ubuntu 14.04 and all necessary executables and dependencies to run MITObim. Docker is compatible with all major operating systems, including Mac OSX and Windows (see [here](https://docs.docker.com/installation/#installation)). The MITObim image has been tested on Ubuntu, but it should work without problem in any other system where docker was successfully installed. 
 
 To install docker on ubuntu should be as easy as:
 ```bash
@@ -42,7 +42,7 @@ You can then specify a working directory on your machine that will be synced wit
 WORKING_DIR=/your/desired/working/dir
 sudo docker run -i -t -v $WORKING_DIR/:/home/data chrishah/mitobim /bin/bash
 ```
-*NOTE* that the first startup may take a couple of minutes because the above command will first download the image from [docker hub](https://registry.hub.docker.com/u/chrishah/mitobim/)). Subsequent launches will take only seconds. 
+**NOTE** that the first startup may take a couple of minutes because the above command will first download the image from [docker hub](https://registry.hub.docker.com/u/chrishah/mitobim/)). Subsequent launches will take only seconds. 
 
 
 COMMENT
@@ -63,16 +63,16 @@ For more details please refer to [Hahn et al. 2013](http://nar.oxfordjournals.or
 TUTORIALS
 ---------
 
-The following tutorials are designed for users with little Unix and no previous MIRA experience. Tutorials I & II will demonstrate how to recover the complete mitochondrial genome of _Thymallus thymallus_ using the mitochondrial genome of _Salvelinus alpinus_ as a starting reference. Tutorial III achieves the same goal using solely a ~700 bp barcoding sequence as initial seed reference. For a quick exploration of your own data I recommend trying something along the lines of Tutorial II. Tutorial IV (to be added soon) uses a proofreading procedure to specifically reconstruct two mitochondrial genomes from a mixed sample containing genomic reads from two species. FOr convenience I always refer to MITObim.pl in the tutorials - The individual user will have to call the respective version of MITObim (e.g. MITObim_1.6.pl) during trying the tutorials. MITObim 1.7 (and newer) might finish some of the tutorials with slighly less iterations than described in the tutorials. Dont worry! 
+The following tutorials are designed for users with little Unix and no previous MIRA experience. Tutorials I & II will demonstrate how to recover the complete mitochondrial genome of _Thymallus thymallus_ using the mitochondrial genome of _Salvelinus alpinus_ as a starting reference. Tutorial III achieves the same goal using solely a ~700 bp barcoding sequence as initial seed reference. For a quick exploration of your own data I recommend trying something along the lines of Tutorial II. Tutorial IV (to be added soon) uses a proofreading procedure to specifically reconstruct two mitochondrial genomes from a mixed sample containing genomic reads from two species. FOr convenience I always refer to MITObim.pl in the tutorials - The individual user will have to call the respective version of MITObim (e.g. `MITObim_1.6.pl`) during trying the tutorials. MITObim 1.7 (and newer) might finish some of the tutorials with slighly less iterations than described in the tutorials. Dont worry! 
 
 
 Preparations:
 
 - download MIRA (MIRA 4 for the use with MITObim 1.7 (and newer) from [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/stable/) or MIRA 3.4.1.1 for the use with MITObim 1.6 from [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/Older%20releases/V3.4.0/). *Precompiled* binaries are available for Linux and OSX. Help can be found [here](http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.html "Definitive Guide to MIRA"). You ll need to put the directory containing the MIRA executables in your PATH in order to successfully use MITObim.pl. If you can't or won't do that you can also tell MITObim where to find the correct MIRA binaries via the --mirapath option.
-- download the MITObim wrapper script and the testdata from Github, e.g. download the entire MITObim repository as zip archive (use the button on the Github page) or use git on the command line (git clone --recursive git://github.com/chrishah/MITObim.git).
-- make the MITObim.pl executable (chmod a+x MITObim.pl) and extract the contents of the testdata archives (tar xvfz testdata1.tgz)
+- download the MITObim wrapper script and the testdata from Github, e.g. download the entire MITObim repository as zip archive (use the button on the Github page) or use git on the command line (`git clone --recursive git://github.com/chrishah/MITObim.git`).
+- make the MITObim.pl executable (`chmod a+x MITObim.pl`) and extract the contents of the testdata archives (`tar xvfz testdata1.tgz`)
 
--*or* just fire up the self-contained docker image.
+- **OR** just fire up the self-contained docker image.
 
 Test the wrapper script by doing:
 
@@ -118,11 +118,11 @@ examples:
 
 The archive testdata1 contains three files:
 
-1. Tthymallus-150bp-300sd50-interleaved.fastq - 6000 simulated illumina reads (read length 150 bp, insert size 300 +- 50 bp) for the mitochondrial genome of _T. thymallus_ as discussed in [Hahn et al](http://nar.oxfordjournals.org/content/early/2013/05/09/nar.gkt371.full "MITObim full article at NAR").
+1. `Tthymallus-150bp-300sd50-interleaved.fastq` - 6000 simulated illumina reads (read length 150 bp, insert size 300 +- 50 bp) for the mitochondrial genome of _T. thymallus_ as discussed in [Hahn et al](http://nar.oxfordjournals.org/content/early/2013/05/09/nar.gkt371.full "MITObim full article at NAR").
 
-2. Salpinus-mt-genome-NC_000861.fasta - mitochondrial genome of _S. alpinus_ in fasta format downloaded from Genbank (accession NC000861).
+2. `Salpinus-mt-genome-NC_000861.fasta` - mitochondrial genome of _S. alpinus_ in fasta format downloaded from Genbank (accession NC000861).
 
-3. Tthymallus-COI-partial-HQ961018.fasta - partial COI sequence of _T. thymallus_ (Genbank acc. HQ961018).
+3. `Tthymallus-COI-partial-HQ961018.fasta` - partial COI sequence of _T. thymallus_ (Genbank acc. HQ961018).
 
 
 TUTORIAL I: reconstruction of a mitochondrial genome using a two step procedure
@@ -252,7 +252,7 @@ A fasta file containing the complete mitochondondrial genome of _T. thymallus_ c
 TUTORIAL II - direct reconstruction without prior mapping assembly using the --quick option
 -------------------------------------------------------------------------------------------
 This TUTORIAL illustrates the quick strategy that I usually use in a first test. It bypasses the intial mapping assembly required in TUTORIAL I, i.e. you only need a reference in fasta format and you reads. To finish a mitochondrial genome it usually takes more iterations than TUTORIAL I above because the initial mapping assembly is less thorough. The **big** advantage is that the whole process can be run on a standard Desktop computer due to the substantial reduction in the number of reads to be dealt with already in the first iteration.
-Run the MITObim.pl script with the --quick option, providing a reference in fasta format (*approximate runtime: 4 min*):
+Run the MITObim.pl script with the `--quick option`, providing a reference in fasta format (*approximate runtime: 4 min*):
 
 	-bash-4.1$ mkdir tutorial2
 	-bash-4.1$ cd tutorial2
@@ -272,7 +272,7 @@ You will find that with this approach MITObim will reconstruct the mitochondrial
 TUTORIAL III - reconstructing mt genomes from mt barcode seeds
 --------------------------------------------------------------
 
-This tutorial reconstructs the mt genome of _T. thymallus_ solely using a partial mitochondrial COI sequence as starting seed. *NOTE* that we also use the new --clean option which tells MITObim to always only keep the latest two iteration directories to save space (*approximate runtime: 20 min*):
+This tutorial reconstructs the mt genome of _T. thymallus_ solely using a partial mitochondrial COI sequence as starting seed. *NOTE* that we also use the new `--clean` option which tells MITObim to always only keep the latest two iteration directories to save space (*approximate runtime: 20 min*):
 
 	-bash-1.4$ mkdir tutorial3
 	-bash-1.4$ cd tutorial3
@@ -287,7 +287,7 @@ for **MITObim 1.7 and later**:
 
 MITObim reconstructs the mitchondrial genome in 82 (or less) iterations.
 
-For "well behaved" datasets the standard mapping assembly can be substituted by a _de novo_ assembly (--denovo flag). Utilizing read pair information (--paired flag) can further speed up the reconstruction if run in _de novo_ mode. This however will not decrease the nuber of necessary iterations in standard mapping mode.
+For "well behaved" datasets the standard mapping assembly can be substituted by a _de novo_ assembly (`--denovo` flag). Utilizing read pair information (`--paired` flag) can further speed up the reconstruction if run in _de novo_ mode. This however will not decrease the number of necessary iterations in standard mapping mode.
 Test this strategy, like so (*approximate runtime: 10 min*):
 
 	-bash-4.1$ mkdir tutorial3-denovo
