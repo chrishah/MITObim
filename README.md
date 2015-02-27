@@ -18,6 +18,10 @@ CONTACT
 
 Christoph Hahn <christoph.hahn@nhm.uio.no>
 
+or
+
+post any questions/comments about MITObim to our [Google Group](https://groups.google.com/forum/#!forum/mitobim-users "MITObim users")
+
 INTRODUCTION
 ------------
 
