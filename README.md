@@ -6,21 +6,22 @@ MITObim - mitochondrial baiting and iterative mapping
 VERSIONS
 --------
 
+1.8 (stable - relies on MIRA 4)
+
 1.6 (stable - relies on MIRA 3.4.1.1)
 
-1.8 (relies on MIRA 4)
-
+We recommend to use the latest version but see note below regarding availability of the proofreading algorithm.
 
 Copyright Christoph Hahn 2012-2015
 
 CONTACT
 -------
 
-Christoph Hahn <christoph.hahn@nhm.uio.no>
+We encourage users to post any questions/comments/problems you might have concerning MITObim to our [Google Group](https://groups.google.com/forum/#!forum/mitobim-users "MITObim users") or the [Github issues](https://github.com/chrishah/MITObim/issues). I'll try to get back to you asap!
 
-or
+or 
 
-post any questions/comments about MITObim to our [Google Group](https://groups.google.com/forum/#!forum/mitobim-users "MITObim users")
+contact me directly under <christoph.hahn@nhm.uio.no>.
 
 INTRODUCTION
 ------------
@@ -46,7 +47,7 @@ You can then specify a working directory on your machine that will be synced wit
 WORKING_DIR=/your/desired/working/dir
 sudo docker run -i -t -v $WORKING_DIR/:/home/data chrishah/mitobim /bin/bash
 ```
-**NOTE** that the first startup may take a couple of minutes because the above command will first download the image from [docker hub](https://registry.hub.docker.com/u/chrishah/mitobim/)). Subsequent launches will take only seconds. 
+**NOTE** that the first startup may take a couple of minutes because the above command will first download the image from [docker hub](https://registry.hub.docker.com/u/chrishah/mitobim/). Subsequent launches will take only seconds. 
 
 
 COMMENT
@@ -132,7 +133,7 @@ The archive testdata1 contains three files:
 TUTORIAL I: reconstruction of a mitochondrial genome using a two step procedure
 -------------------------------------------------------------------------------
 
-One strategy for successful MITObim performance is to prepare an initial reference from the conserved regions of a distantly related mitochondrial reference genome using a MIRA mapping assembly in a first step. In a second step the MITObim wrapper script is applied to this newly constructed reference in order to reconstruct the entire mitochondrial genome.
+One strategy for successful MITObim performance is to prepare an initial reference from the conserved regions of a distantly related mitochondrial reference genome using a MIRA mapping assembly in a first step. In a second step the MITObim wrapper script is applied to this newly constructed reference in order to reconstruct the entire mitochondrial genome. Impatient users are encouraged to move directly to Tutorials II & III below which show examples for using the `--quick` strategy - a single step procedure - i.e. they don't require the initial mapping assembly to be performed manually. 
 
 a. Initial mapping assembly using MIRA:
 
