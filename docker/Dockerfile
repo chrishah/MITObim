@@ -14,22 +14,25 @@ ENV LC_ALL en_US.UTF-8
 RUN locale-gen en_US.UTF-8
 RUN dpkg-reconfigure locales
 
-# Python binary dependencies, developer tools
+# some necessary dependencies, developer tools
 RUN apt-get install -y -q build-essential make gcc zlib1g-dev git python python-dev python-pip
-
 RUN apt-get install git
 
+# add scripts, executables, testdata
 RUN mkdir /home/src
 ADD external_software /home/src/
 RUN mkdir /home/src/scripts
 ADD scripts/MITObim_1.8.pl /home/src/scripts/
-RUN chmod a+x /home/src/scripts/MITObim_1.8.pl
 ADD scripts/MITObim_1.6.pl /home/src/scripts/
+ADD scripts/interleave-fastqgz-MITOBIM.py /home/src/scripts/
+RUN chmod a+x /home/src/scripts/MITObim_1.8.pl
 RUN chmod a+x /home/src/scripts/MITObim_1.6.pl
+RUN chmod a+x /home/src/scripts/interleave-fastqgz-MITOBIM.py
 ADD testdata/testdata1.tgz /home/testdata/
 
 RUN ln -s /home/src/mira_4.0.2/mira* /usr/bin
-RUN ln -s /home/src/scripts/MITObim_1.8.pl /usr/bin
+ENV PATH /home/src/scripts:$PATH
+# RUN ln -s /home/src/scripts/MITObim_1.8.pl /usr/bin
 
 VOLUME /home/data
 WORKDIR /home
