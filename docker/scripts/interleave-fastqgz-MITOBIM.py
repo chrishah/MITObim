@@ -41,4 +41,5 @@ if __name__ == '__main__':
         with open(file1) as f1:
             with open(file2) as f2:
                 interleave(f1, f2)
-        
+    f1.close()
+    f2.close() 
