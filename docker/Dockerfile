@@ -29,6 +29,7 @@ RUN chmod a+x /home/src/scripts/MITObim_1.8.pl
 RUN chmod a+x /home/src/scripts/MITObim_1.6.pl
 RUN chmod a+x /home/src/scripts/interleave-fastqgz-MITOBIM.py
 ADD testdata/testdata1.tgz /home/testdata/
+RUN mkdir /home/temp
 
 RUN ln -s /home/src/mira_4.0.2/mira* /usr/bin
 ENV PATH /home/src/scripts:$PATH

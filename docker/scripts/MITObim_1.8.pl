@@ -25,6 +25,7 @@ my $platform = "solexa";
 my $platform_settings = "SOLEXA";
 my $shme = "";
 my $trim_off = "";
+my $redirect_temp = "";
 my ($mirapath, $mira, $miraconvert, $mirabait) = ("", "mira", "miraconvert", "mirabait");
 my (@reads, @output, @path, @current_contig_stats, @contiglengths, @number_of_reads, @number_of_contigs);
 my %hash;
@@ -56,6 +57,7 @@ my $USAGE = 	"\nusage: ./MITObim.pl <parameters>
 		--missmatch <int>	number of allowed missmatches in mapping - only for illumina data (default: 15% of avg. read length)
 		--min_cov <int>		minimum average coverage of contigs to be retained (default: off)
 		--mirapath <string>     full path to MIRA binaries (only needed if MIRA is not in PATH)
+		--redirect_tmp		redirect temporary output to this location (useful in case you are running MITObim on an NFS mount)
 		--iontor		use iontorrent data (experimental - default is illumina data)
 		--454			use 454 data (experimental - default is illumina data)
 		\nexamples:
@@ -93,7 +95,8 @@ GetOptions (	"start=i" => \$startiteration,
 #		"readlength=i" => \$readlength,
 #		"insertsize=i" => \$insertsize,
 		"split!"	=>	\$splitting,
-		"min_cov=i"	=>	\$min_contig_cov) or die "Incorrect usage!\n$USAGE";
+		"min_cov=i"	=>	\$min_contig_cov,
+		"redirect_tmp=s" =>	\$redirect_temp) or die "Incorrect usage!\n$USAGE";
 
 
 print $PROGRAM; 
@@ -217,6 +220,10 @@ if (!$trimoverhang){
 	$trimoverhang = "-SB:tor=no";
 }else {
 	$trimoverhang = "-SB:tor=yes";
+}
+
+if ($redirect_temp) {
+	$redirect_temp="-DI:trt=$redirect_temp"
 }
 
 print "\nStarting MITObim \n";
@@ -345,7 +352,7 @@ foreach (@iteration){
 	
 	MIRA:
 	print "\nrunning $miramode assembly using MIRA\n\n";
-	&create_manifest($currentiteration,$strainname,$refname,$miramode,$trim_off,$platform_settings,$shme,$paired,$trimoverhang,"$strainname-readpool-it$currentiteration.fastq","backbone_it$currentiteration\_initial_$refname.fna");
+	&create_manifest($currentiteration,$strainname,$refname,$miramode,$trim_off,$platform_settings,$shme,$paired,$trimoverhang,"$strainname-readpool-it$currentiteration.fastq","backbone_it$currentiteration\_initial_$refname.fna", $redirect_temp);
 	@output = qx($mira manifest.conf ); 
 
 	$exit = $? >> 8;
@@ -359,7 +366,18 @@ foreach (@iteration){
 		print "\nMIRA seems to have failed - see detailed output above\n";
 		exit;
 	}
-
+	
+	if ($redirect_temp) {
+		my $tmp_link = readlink("$strainname-$refname\_assembly/$strainname-$refname\_d_tmp");
+		rmtree ("$strainname-$refname\_assembly/$strainname-$refname\_d_tmp") or die $!;
+		mkdir "$strainname-$refname\_assembly/$strainname-$refname\_d_tmp/" or die $1; 
+		my @files = glob("$tmp_link/*");			
+		for (@files) {
+			move ("$_", "$strainname-$refname\_assembly/$strainname-$refname\_d_tmp/") or die $!;
+		}
+		rmtree ("$tmp_link") or die $!;
+	}
+	
 	@path = abs_path;
         push (@path, "/$strainname-$refname\_assembly/$strainname-$refname\_d_results/$strainname-$refname\_out.maf");
         $maf = join("",@path);
@@ -859,7 +877,7 @@ sub finalize_sequence{
 }
 
 sub create_manifest {
-	my ($iter, $sampleID, $refID, $mmode, $trim, $platform, $solexa_missmatches, $pair, $overhang, $reads, $ref);
+	my ($iter, $sampleID, $refID, $mmode, $trim, $platform, $solexa_missmatches, $pair, $overhang, $reads, $ref, $redirect);
 	$iter = $_[0];
 	$sampleID = $_[1];
 	$refID = $_[2];
@@ -871,11 +889,12 @@ sub create_manifest {
 	$overhang = $_[8];
 	$reads = $_[9];
 	$ref = $_[10];
+	$redirect = $_[11];
 
 	open (MANIFEST,">manifest.conf") or die $!;
 	print MANIFEST "#manifest file for iteration $iter created by MITObim\n\nproject = $sampleID-$refID
 	\njob = genome,$mmode,accurate
-	\nparameters = -NW:mrnl=0 -AS:nop=1 $overhang $platform\_SETTINGS $trim -CO:msr=no $solexa_missmatches\n";
+	\nparameters = -NW:mrnl=0 -AS:nop=1 $redirect $overhang $platform\_SETTINGS $trim -CO:msr=no $solexa_missmatches\n";
 	#-notraceinfo -
 	if ($mmode eq "mapping"){
 		print MANIFEST "\nreadgroup\nis_reference\ndata = $ref\nstrain = $refID\n";
