@@ -19,11 +19,11 @@ CONTACT
 
 We encourage users to post any questions/comments/problems you might have concerning MITObim to our [Google Group](https://groups.google.com/forum/#!forum/mitobim-users "MITObim users") or the [Github issues](https://github.com/chrishah/MITObim/issues). 
 
-or (*in emergency situations*)
+or (__*in emergency situations*__)
 
 contact me directly under <c.hahn@hull.ac.uk>.
 
-I'll try to get back to you asap! If you don't hear from me in a few days, please just send another reminder!
+I'll try respond to you asap! If you don't hear from me within a few days, please just __send another reminder__!
 
 INTRODUCTION
 ------------
