@@ -12,22 +12,25 @@ VERSIONS
 
 We recommend to use the latest version but see note below regarding availability of the proofreading algorithm.
 
-Copyright Christoph Hahn 2012-2015
+Copyright Christoph Hahn 2012-2016
 
 CONTACT
 -------
 
-We encourage users to post any questions/comments/problems you might have concerning MITObim to our [Google Group](https://groups.google.com/forum/#!forum/mitobim-users "MITObim users") or the [Github issues](https://github.com/chrishah/MITObim/issues). I'll try to get back to you asap!
+We encourage users to post any questions/comments/problems you might have concerning MITObim to our [Google Group](https://groups.google.com/forum/#!forum/mitobim-users "MITObim users") or the [Github issues](https://github.com/chrishah/MITObim/issues). 
 
-or 
+or (*in emergency situations*)
 
-contact me directly under <christoph.hahn@nhm.uio.no>.
+contact me directly under <c.hahn@hull.ac.uk>.
+
+I'll try to get back to you asap! If you don't hear from me in a few days, please just send another reminder!
 
 INTRODUCTION
 ------------
 
 This document contains instructions on how to use the MITObim pipeline described in Hahn et al. 2013. The full article can be found [here](http://nar.oxfordjournals.org/content/41/13/e129 "MITObim full article at NAR"). Kindly cite the article if you are using MITObim in your work. The pipeline is at the moment intended to be used with illumina data, but the use of Iontorrent and 454 data has been enabled in the current versions.
 
+We provide further examples [here](https://github.com/chrishah/MITObim/tree/master/examples) as Jupyter notebooks. Get in touch if you feel like sharing your particular MITObim solution and I'd be happy to put it up here, too!
 
 PREREQUISITES
 -------------
