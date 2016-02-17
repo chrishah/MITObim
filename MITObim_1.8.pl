@@ -104,7 +104,6 @@ print $VERSION;
 print $AUTHOR; 
 
 print $USAGE and exit if $help;
-print $USAGE and exit if ($startiteration > $enditeration);
 print $USAGE and exit if !$readpool;
 unless ($quick){
         print $USAGE and exit if !$maf;
@@ -131,6 +130,7 @@ if ($quick){
 	$maf = 0;
 	$startiteration = 0;
 }
+print $USAGE and exit if ($startiteration > $enditeration);
 unless (((-e $maf)||($quick)) && (-e $readpool)){
         print "\nAre readpool AND maf/reference files there?\n";
         exit 1;
