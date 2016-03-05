@@ -26,6 +26,7 @@ my $platform_settings = "SOLEXA";
 my $shme = "";
 my $trim_off = "";
 my $redirect_temp = "";
+my $NFS_warn_only = "";
 my ($mirapath, $mira, $miraconvert, $mirabait) = ("", "mira", "miraconvert", "mirabait");
 my (@reads, @output, @path, @current_contig_stats, @contiglengths, @number_of_reads, @number_of_contigs);
 my %hash;
@@ -58,6 +59,7 @@ my $USAGE = 	"\nusage: ./MITObim.pl <parameters>
 		--min_cov <int>		minimum average coverage of contigs to be retained (default: off)
 		--mirapath <string>     full path to MIRA binaries (only needed if MIRA is not in PATH)
 		--redirect_tmp		redirect temporary output to this location (useful in case you are running MITObim on an NFS mount)
+		--NFS_warn_only		allow MIRA to run on NFS mount without aborting -  warn only (expert option - see MIRA documentation 'check_nfs')
 		--iontor		use iontorrent data (experimental - default is illumina data)
 		--454			use 454 data (experimental - default is illumina data)
 		\nexamples:
@@ -96,7 +98,8 @@ GetOptions (	"start=i" => \$startiteration,
 #		"insertsize=i" => \$insertsize,
 		"split!"	=>	\$splitting,
 		"min_cov=i"	=>	\$min_contig_cov,
-		"redirect_tmp=s" =>	\$redirect_temp) or die "Incorrect usage!\n$USAGE";
+		"redirect_tmp=s" =>	\$redirect_temp,
+		"NFS_warn_only!" => $NFS_warn_only) or die "Incorrect usage!\n$USAGE";
 
 
 print $PROGRAM; 
@@ -352,7 +355,7 @@ foreach (@iteration){
 	
 	MIRA:
 	print "\nrunning $miramode assembly using MIRA\n\n";
-	&create_manifest($currentiteration,$strainname,$refname,$miramode,$trim_off,$platform_settings,$shme,$paired,$trimoverhang,"$strainname-readpool-it$currentiteration.fastq","backbone_it$currentiteration\_initial_$refname.fna", $redirect_temp);
+	&create_manifest($currentiteration,$strainname,$refname,$miramode,$trim_off,$platform_settings,$shme,$paired,$trimoverhang,"$strainname-readpool-it$currentiteration.fastq","backbone_it$currentiteration\_initial_$refname.fna", $redirect_temp, $NFS_warn_only);
 	@output = qx($mira manifest.conf ); 
 
 	$exit = $? >> 8;
@@ -877,7 +880,7 @@ sub finalize_sequence{
 }
 
 sub create_manifest {
-	my ($iter, $sampleID, $refID, $mmode, $trim, $platform, $solexa_missmatches, $pair, $overhang, $reads, $ref, $redirect);
+	my ($iter, $sampleID, $refID, $mmode, $trim, $platform, $solexa_missmatches, $pair, $overhang, $reads, $ref, $redirect, $NFS_warn);
 	$iter = $_[0];
 	$sampleID = $_[1];
 	$refID = $_[2];
@@ -890,11 +893,16 @@ sub create_manifest {
 	$reads = $_[9];
 	$ref = $_[10];
 	$redirect = $_[11];
+	$NFS_warn = $_[12];
+
+	if ($NFS_warn){
+		$NFS_warn = ":cnfs=warn"
+	}
 
 	open (MANIFEST,">manifest.conf") or die $!;
 	print MANIFEST "#manifest file for iteration $iter created by MITObim\n\nproject = $sampleID-$refID
 	\njob = genome,$mmode,accurate
-	\nparameters = -NW:mrnl=0 -AS:nop=1 $redirect $overhang $platform\_SETTINGS $trim -CO:msr=no $solexa_missmatches\n";
+	\nparameters = -NW:mrnl=0$NFS_warn -AS:nop=1 $redirect $overhang $platform\_SETTINGS $trim -CO:msr=no $solexa_missmatches\n";
 	#-notraceinfo -
 	if ($mmode eq "mapping"){
 		print MANIFEST "\nreadgroup\nis_reference\ndata = $ref\nstrain = $refID\n";
