@@ -2,7 +2,7 @@
 #
 # MITObim - mitochondrial baiting and iterative mapping
 # wrapper script version 1.8
-# Author: Christoph Hahn, 2012-2014
+# Author: Christoph Hahn, 2012-2016
 # christoph.hahn@nhm.uio.no
 
 use strict;
@@ -19,10 +19,10 @@ my $startiteration = 1;
 my $enditeration = 1;
 
 my ($quick, $noshow, $help, $strainname, $paired, $mode, $refname, $readpool, $maf, $proofreading, $readlength, $insertsize, $MM, $trim, $trimoverhang, $k_bait, $clean, $clean_interval, $min_contig_cov) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 31, 0, 2, 0);
-my ($miramode, $key, $val, $exit, $current_contiglength, $current_number_of_reads, $current_number_of_contigs, $iontor, $Roche454);
+my ($miramode, $key, $val, $exit, $current_contiglength, $current_number_of_reads, $current_number_of_contigs);
 my $splitting = 0;
 my $platform = "solexa";
-my $platform_settings = "SOLEXA";
+my $platform_settings;# = "SOLEXA";
 my $shme = "";
 my $trim_off = "";
 my $redirect_temp = "";
@@ -32,7 +32,7 @@ my (@reads, @output, @path, @current_contig_stats, @contiglengths, @number_of_re
 my %hash;
 my $PROGRAM = "\nMITObim - mitochondrial baiting and iterative mapping\n";
 my $VERSION = "version 1.8\n";
-my $AUTHOR = "author: Christoph Hahn, (c) 2012-2015\n";
+my $AUTHOR = "author: Christoph Hahn, (c) 2012-2016\n";
 my $cite = "\nif you found MITObim useful, please cite:
 Hahn C, Bachmann L and Chevreux B. (2013) Reconstructing mitochondrial genomes directly from genomic next-generation sequencing reads -
 a baiting and iterative mapping approach. Nucl. Acids Res. 41(13):e129. doi: 10.1093/nar/gkt371\n\n";
@@ -47,6 +47,7 @@ my $USAGE = 	"\nusage: ./MITObim.pl <parameters>
 		\noptional:
 		--quick <FILE>		starts process with initial baiting using provided fasta reference
 		--kbait <int>		set kmer for baiting stringency (default: 31)
+		--platform		specify sequencing platform (default: 'solexa'; other options: 'iontor', '454', 'pacbio')
 		--denovo		runs MIRA in denovo mode (default: mapping)
 		--pair			finds pairs after baiting (relies on /1 and /2 header convention for read pairs) (default: no)
 		--verbose		show detailed output of MIRA modules (default: no)
@@ -60,8 +61,6 @@ my $USAGE = 	"\nusage: ./MITObim.pl <parameters>
 		--mirapath <string>     full path to MIRA binaries (only needed if MIRA is not in PATH)
 		--redirect_tmp		redirect temporary output to this location (useful in case you are running MITObim on an NFS mount)
 		--NFS_warn_only		allow MIRA to run on NFS mount without aborting -  warn only (expert option - see MIRA documentation 'check_nfs')
-		--iontor		use iontorrent data (experimental - default is illumina data)
-		--454			use 454 data (experimental - default is illumina data)
 		\nexamples:
 		./MITObim.pl -start 1 -end 5 -sample StrainX -ref reference-mt -readpool illumina_readpool.fastq -maf initial_assembly.maf
 		./MITObim.pl -end 10 --quick reference.fasta -sample StrainY -ref reference-mt -readpool illumina_readpool.fastq\n\n";
@@ -92,8 +91,7 @@ GetOptions (	"start=i" => \$startiteration,
 		"trimreads!" => \$trim,
 		"trimoverhang!" => \$trimoverhang,
 		"missmatch=i" => \$MM,
-		"iontor!" => \$iontor,
-		"454!" => \$Roche454,
+		"platform=s" => \$platform,
 #		"readlength=i" => \$readlength,
 #		"insertsize=i" => \$insertsize,
 		"split!"	=>	\$splitting,
@@ -123,6 +121,9 @@ if ($maf){
 		print "Cant find *.maf file. Is the path correct?\n";
 	}
 }
+
+($platform, $platform_settings) = &set_platform($platform);
+
 if ($quick){
 	$quick=abs_path($quick);
         unless (-e $quick){
@@ -168,14 +169,6 @@ if (!$trim){
 	$trim_off = "\"--noclipping -CL:pec=no\"";
 }
 
-if ($iontor){
-	$platform = "iontor";
-	$platform_settings = "IONTOR";
-}
-if ($Roche454){
-	$platform = "454";
-	$platform_settings = "454";
-}
 
 print "\nFull command run:\n$command\n";
 print "\nAll paramters seem to make sense:\n";
@@ -194,7 +187,7 @@ print "minimum avg. coverage: $min_contig_cov (off=0)\n";
 print "clean: $clean (off=0, on=1)\n";
 print "trim reads: $trim (off=0, on=1)\n";
 print "trim overhang: $trimoverhang (no=0, yes=1)\n";
-print "platform: $platform_settings\n";
+print "platform: $platform\n";
 print "kmer baiting: $k_bait\n";
 #print "proofread: $proofreading (off=0, on=1)\n";
 
@@ -446,6 +439,29 @@ print "\nsuccessfully completed $enditeration iterations with MITObim! " . strft
 #
 #
 #
+
+sub set_platform{
+	my @platforms = ('solexa', '454', 'iontorrent', 'pacbio');
+	my %pf_settings = ("solexa" => "SOLEXA_SETTINGS", "454" => "454_SETTINGS", "iontorrent" => "IONTOR_SETTINGS", "pacbio" => "PCBIOHQ_SETTINGS -CO:mrpg=5");
+	my $user_setting = shift;
+	my @user_choice;
+	for (@platforms){
+		if ( $_ =~ /^$user_setting/ ){
+			push(@user_choice, $_);
+		}
+	}
+
+	if (scalar(@user_choice) > 1){
+		print "\nYour platform choice was ambiguous: $user_setting could be: @user_choice - Please try again\n";
+		exit;
+
+	} elsif (scalar(@user_choice) == 0){
+		print "\nPlease specify a valid sequencing platform - not specifying anything will default into: $platforms[0]\n\navailable options are:\n@platforms\n";
+		exit;
+	}
+	
+	return ($user_choice[0], $pf_settings{$user_choice[0]})
+}
 
 sub get_contig_stats{
         my $contig = $_[0];
@@ -902,12 +918,13 @@ sub create_manifest {
 	open (MANIFEST,">manifest.conf") or die $!;
 	print MANIFEST "#manifest file for iteration $iter created by MITObim\n\nproject = $sampleID-$refID
 	\njob = genome,$mmode,accurate
-	\nparameters = -NW:mrnl=0$NFS_warn -AS:nop=1 $redirect $overhang $platform\_SETTINGS $trim -CO:msr=no $solexa_missmatches\n";
+	\nparameters = -NW:mrnl=0$NFS_warn -AS:nop=1 $redirect $overhang $platform $trim -CO:msr=no $solexa_missmatches\n";
+	my @technology = split("_",$platform);
 	#-notraceinfo -
 	if ($mmode eq "mapping"){
 		print MANIFEST "\nreadgroup\nis_reference\ndata = $ref\nstrain = $refID\n";
 	}
-	print MANIFEST "\nreadgroup = reads\ndata = $reads\ntechnology = $platform";
+	print MANIFEST "\nreadgroup = reads\ndata = $reads\ntechnology = $technology[0]";
 	if ($pair){
 #		print MANIFEST "\nsegmentplacement = ---> <--- infoonly";
 		print MANIFEST "\nsegmentplacement = ---> <--- exclusion_criterion";
