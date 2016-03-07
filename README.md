@@ -28,7 +28,7 @@ I'll try respond to you asap! If you don't hear from me within a few days, pleas
 INTRODUCTION
 ------------
 
-This document contains instructions on how to use the MITObim pipeline described in Hahn et al. 2013. The full article can be found [here](http://nar.oxfordjournals.org/content/41/13/e129 "MITObim full article at NAR"). Kindly cite the article if you are using MITObim in your work. The pipeline was originally developed for _Illumina_ data, but thanks to the versatility of the MIRA assembler, MITObim supports in principle also data from the _Iontorrent_, _454_ and _PacBio_ sequencing platforms.
+This document contains instructions on how to use the MITObim pipeline described in Hahn et al. 2013. The full article can be found [here](http://nar.oxfordjournals.org/content/41/13/e129 "MITObim full article at NAR"). Kindly cite the article if you are using MITObim in your work. The pipeline was originally developed for __Illumina__ data, but thanks to the versatility of the MIRA assembler, MITObim supports in principle also data from the __Iontorrent__, __454__ and __PacBio__ sequencing platforms.
 
 Below you can find a few basic tutorials for how to run MITObim and I encorage you to give them a try with the testdata that comes with this Repo, just to make sure everything is running smoothly on your system. It'll only take a few minutes and will potentially safe you a lot of time down the line.
 
