@@ -28,18 +28,23 @@ I'll try respond to you asap! If you don't hear from me within a few days, pleas
 INTRODUCTION
 ------------
 
-This document contains instructions on how to use the MITObim pipeline described in Hahn et al. 2013. The full article can be found [here](http://nar.oxfordjournals.org/content/41/13/e129 "MITObim full article at NAR"). Kindly cite the article if you are using MITObim in your work. The pipeline is at the moment intended to be used with illumina data, but the use of Iontorrent and 454 data has been enabled in the current versions.
+This document contains instructions on how to use the MITObim pipeline described in Hahn et al. 2013. The full article can be found [here](http://nar.oxfordjournals.org/content/41/13/e129 "MITObim full article at NAR"). Kindly cite the article if you are using MITObim in your work. The pipeline was originally developed for _Illumina_ data, but thanks to the versatility of the MIRA assembler, MITObim supports in principle also data from the _Iontorrent_, _454_ and _PacBio_ sequencing platforms.
 
-We provide further examples [here](https://github.com/chrishah/MITObim/tree/master/examples) as Jupyter notebooks. Get in touch if you feel like sharing your particular MITObim solution and I'd be happy to put it up here, too!
+Below you can find a few basic tutorials for how to run MITObim and I encorage you to give them a try with the testdata that comes with this Repo, just to make sure everything is running smoothly on your system. It'll only take a few minutes and will potentially safe you a lot of time down the line.
+
+I provide further examples [here](https://github.com/chrishah/MITObim/tree/master/examples) as Jupyter notebooks. Get in touch if you feel like sharing your particular MITObim solution and I'd be happy to put it up here, too!
 
 PREREQUISITES
 -------------
 
 - GNU utilities
 - Perl
-- A running version of MIRA 3.4.1.1 (for the use with MITObim 1.6 - download [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/Older%20releases/V3.4.0/)) or MIRA 4 (for the use with MITObim 1.8 - download [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/stable/)) is required. **Precompiled** binaries for MIRA are available for Linux and OSX. An excellent guide to MIRA is available [here](http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.html "The definitive Guide to MIRA").
+- A running version of MIRA 
+  - MIRA 4 (for the use with MITObim 1.8 (and newer) - download [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/stable/)). 
+  - MIRA 3.4.1.1 (for the use with MITObim 1.6 - download [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/Older%20releases/V3.4.0/)).
+  - **Precompiled** binaries for MIRA are available for Linux and OSX. An excellent guide to MIRA is available [here](http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.html "The definitive Guide to MIRA").
 
-As an **alternative**, I have generated a [docker](https://www.docker.com/) image for MITObim (see [here](https://registry.hub.docker.com/u/chrishah/mitobim/)). Find out what docker is [here](https://www.docker.com/whatisdocker/). The MITObim image contains a stripped down version of Ubuntu 14.04 and all necessary executables and dependencies to run MITObim. Docker is compatible with all major operating systems, including Mac OSX and Windows (see [here](https://docs.docker.com/installation/#installation)). The MITObim image has been tested on Ubuntu, but it should work without problem in any other system where docker was successfully installed. 
+As an **alternative**, I have generated a [docker](https://www.docker.com/) image for MITObim (see [here](https://registry.hub.docker.com/u/chrishah/mitobim/)). Find out what docker is [here](https://www.docker.com/whatisdocker/). The MITObim image contains a stripped down version of Ubuntu 14.04 and all necessary executables and dependencies to run the latest version of MITObim. Docker is compatible with all major operating systems, including Mac OSX and Windows (see [here](https://docs.docker.com/installation/#installation)). The MITObim image has been tested on Ubuntu, but it should work without problem in any other system where docker was successfully installed. 
 
 To install docker on ubuntu should be as easy as:
 ```bash
@@ -105,6 +110,7 @@ parameters:
 optional:
 		--quick <FILE>		starts process with initial baiting using provided fasta reference
 		--kbait <int>		set kmer for baiting stringency (default: 31)
+		--platform		specify sequencing platform (default: 'solexa'; other options: 'iontor', '454', 'pacbio')
 		--denovo		runs MIRA in denovo mode (default: mapping)
 		--pair			finds pairs after baiting (relies on /1 and /2 header convention for read pairs) (default: no)
 		--verbose		show detailed output of MIRA modules (default: no)
@@ -116,9 +122,9 @@ optional:
 		--missmatch <int>	number of allowed missmatches in mapping - only for illumina data (default: 15% of avg. read length)
 		--min_cov <int>		minimum average coverage of contigs to be retained (default: off)
 		--mirapath <string>     full path to MIRA binaries (only needed if MIRA is not in PATH)
-		--iontor		use iontorrent data (experimental - default is illumina data)
-		--454			use 454 data (experimental - default is illumina data)
-		
+		--redirect_tmp		redirect temporary output to this location (useful in case you are running MITObim on an NFS mount)
+		--NFS_warn_only		allow MIRA to run on NFS mount without aborting -  warn only (expert option - see MIRA documentation 'check_nfs')
+
 examples:
 		./MITObim.pl -start 1 -end 5 -sample StrainX -ref reference-mt -readpool illumina_readpool.fastq -maf initial_assembly.maf
 		./MITObim.pl -end 10 --quick reference.fasta -sample StrainY -ref reference-mt -readpool illumina_readpool.fastq
