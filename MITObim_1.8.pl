@@ -21,14 +21,18 @@ my $enditeration = 1;
 my ($quick, $noshow, $help, $strainname, $paired, $mode, $refname, $readpool, $maf, $proofreading, $readlength, $insertsize, $MM, $trim, $trimoverhang, $k_bait, $clean, $clean_interval, $min_contig_cov) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 31, 0, 2, 0);
 my ($miramode, $key, $val, $exit, $current_contiglength, $current_number_of_reads, $current_number_of_contigs);
 my $splitting = 0;
+my @readfiles;
+my @baiting_files;
 my $platform = "solexa";
-my $platform_settings;# = "SOLEXA";
+my $platform_settings;
 my $shme = "";
 my $trim_off = "";
 my $redirect_temp = "";
 my $NFS_warn_only = "";
+my $threads = 1;
 my ($mirapath, $mira, $miraconvert, $mirabait) = ("", "mira", "miraconvert", "mirabait");
 my (@reads, @output, @path, @current_contig_stats, @contiglengths, @number_of_reads, @number_of_contigs);
+my $WD = abs_path(".");
 my %hash;
 my $PROGRAM = "\nMITObim - mitochondrial baiting and iterative mapping\n";
 my $VERSION = "version 1.8\n";
@@ -179,6 +183,7 @@ print "refname: $refname\n";
 print "readpool: $readpool\n";
 print "maf: $maf\n";
 print "quick: $quick\n";
+print "threads: $threads (default=1)\n";
 print "paired: $paired (off=0, on=1)\n";
 print "assembly mode: $mode (mapping=0, denovo=1)\n";
 print "verbose: $noshow (off=0, on=1)\n";
@@ -224,9 +229,23 @@ if ($redirect_temp) {
 
 print "\nStarting MITObim \n";
 
+if ($threads > 1){
+	mkdir "readpool.threads" or die $!;
+	&split_fastq($threads, $readpool);
+	for (my $i = 0; $i < $threads; $i++){
+		push(@readfiles, $WD."/readpool.threads/readpool.thread.$i.fastq");
+	}
+
+}else {
+	push(@readfiles, $readpool);
+}
+
+print "READFILES TO PROCESS:\n@readfiles\n";
+
 my @iteration = ($startiteration .. $enditeration);
 foreach (@iteration){
 	chomp;
+	undef @baiting_files;
 	my $currentiteration = $_;
 	mkdir "iteration$currentiteration" or die "MITObim will not overwrite an existing directory: iteration$currentiteration\n";
 	chdir "iteration$currentiteration" or die $!;
@@ -285,24 +304,28 @@ foreach (@iteration){
 		}
 	}
 	print "\nfishing readpool using mirabait (k = $k_bait)\n\n";
+
+	my $thread = 0;
+	&run_mirabait(abs_path, $thread, $mirabait, $k_bait, abs_path."/temp_baitfile.fasta", @readfiles[$thread], "$strainname-readpool-it$currentiteration", $noshow);
+	push(@baiting_files, abs_path."/mirabait.$thread/$strainname-readpool-it$currentiteration");
 	
-#	@output = (`mirabait -k $k_bait -n 1 temp_baitfile.fasta $readpool $strainname-$refname\_in.$platform 2>&1`);
-	@output = qx($mirabait -k $k_bait -n 1 temp_baitfile.fasta $readpool $strainname-readpool-it$currentiteration);
-	$exit = $? >> 8;
-	unless (!$noshow){
-		print "@output\n";
-	}
-	if (!-s "$strainname-readpool-it$currentiteration.fastq"){
-		print "\nyour readpool does not contain any reads with reasonable match (k = $k_bait) to your reference - Maybe you ll want to different settings or even a different reference?\n\n";
-		exit;
-	}
-	unless ($exit == 0){
-		if (!$noshow){
-			print "@output\n";
-		}
-	        print "\nmirabait seems to have failed - see detailed output above\n";
-	        exit;
-	}
+##	@output = (`mirabait -k $k_bait -n 1 temp_baitfile.fasta $readpool $strainname-$refname\_in.$platform 2>&1`);
+#	@output = qx($mirabait -k $k_bait -n 1 temp_baitfile.fasta $readpool $strainname-readpool-it$currentiteration);
+#	$exit = $? >> 8;
+#	unless (!$noshow){
+#		print "@output\n";
+#	}
+#	if (!-s "$strainname-readpool-it$currentiteration.fastq"){
+#		print "\nyour readpool does not contain any reads with reasonable match (k = $k_bait) to your reference - Maybe you ll want to different settings or even a different reference?\n\n";
+#		exit;
+#	}
+#	unless ($exit == 0){
+#		if (!$noshow){
+#			print "@output\n";
+#		}
+#	        print "\nmirabait seems to have failed - see detailed output above\n";
+#	        exit;
+#	}
 	
 	FINDPAIRS:
 	
@@ -348,7 +371,7 @@ foreach (@iteration){
 	
 	MIRA:
 	print "\nrunning $miramode assembly using MIRA\n\n";
-	&create_manifest($currentiteration,$strainname,$refname,$miramode,$trim_off,$platform_settings,$shme,$paired,$trimoverhang,"$strainname-readpool-it$currentiteration.fastq","backbone_it$currentiteration\_initial_$refname.fna", $redirect_temp, $NFS_warn_only);
+	&create_manifest($currentiteration,$strainname,$refname,$miramode,$trim_off,$platform_settings,$shme,$paired,$trimoverhang,"backbone_it$currentiteration\_initial_$refname.fna", $redirect_temp, $NFS_warn_only, @baiting_files);
 	@output = qx($mira manifest.conf ); 
 
 	$exit = $? >> 8;
@@ -439,6 +462,112 @@ print "\nsuccessfully completed $enditeration iterations with MITObim! " . strft
 #
 #
 #
+
+sub run_mirabait{
+        my $base = shift;
+        my $thread = shift;
+        my $mirabait = shift;
+        my $k_bait = shift;
+        my $bait_file = shift;
+        my $read_pool = shift;
+        my $out_prefix = shift;
+        my $verbose = shift;
+        sleep $thread;
+        mkdir "$base/mirabait.$thread" or die $!;
+        chdir "$base/mirabait.$thread" or die $!;
+        print "starting thread $thread\n";
+
+        $out_prefix ="$base/mirabait.$thread/$out_prefix";
+
+        my $cmd = "$mirabait -k $k_bait -n 1 $bait_file $read_pool $out_prefix";
+        print "$cmd\n";
+        my @output = qx($cmd);
+	my $exit = $? >> 8;
+        open(OUT, ">", "$base/mirabait.$thread/mirabait.$thread.log");
+        print OUT "@output\n";
+
+        unless ($exit == 0){
+                if (!$verbose){
+                        print "@output\n";
+                }
+                print "\nmirabait.$thread failed - see log at '$base/mirabait.$thread/mirabait.$thread.log' for details\n";
+		exit;
+        }
+	if (!-s $out_prefix.".fastq"){
+                print "\nmirabait.$thread failed to bait any reads with reasonable match (k = $k_bait) to your reference - Maybe you ll want to different settings or even a different reference?\n\n";
+		exit;
+        } else{
+		print "\nmirabait.$thread - ok!\n";
+	}
+
+
+        chdir "$base";
+        return $thread;
+}
+
+
+sub split_fastq{
+	my $parts = shift;
+	my $reads = shift;
+	my %hash;
+	for (my $i = 0; $i < $parts; $i++){
+		$hash{$i} = ''
+	}
+	my $blocksize = 10000;
+	print "\nSplitting up $reads into $parts files to allow for parallelization\n";
+	my $FH = &return_FH($readpool);
+	
+	while(<$FH>){
+        	my $out=$_;
+        	for (my $j=0; $j<7; $j++){
+                	$out.=<$FH>;
+        	}
+
+        	my $ran=int(rand($parts));
+        	$hash{$ran}.=$out;
+
+        	if ( ($. % ($blocksize*4) == 0) or eof($FH)){
+                	print "\t".($./4)." reads processed\n";
+                	&print_to_file("readpool.threads/readpool.thread", \%hash);
+                	&flush(\%hash);
+        	}
+	}
+	close $FH;
+
+}
+
+sub return_FH{
+	my $file = shift;
+	my $IN;
+	if ($file =~ /gz$/){
+		open $IN, "gunzip -dc $file |" or warn "Cannot read $file: $!";
+	}else{
+		open $IN, $file or warn "Cannot read $file: $!";
+	}
+
+	return $IN;
+}
+
+sub print_to_file{
+	my $prefix = shift;
+	my $format = "fastq";
+        my ($hash_ref) = @_;
+        for my $key (keys %$hash_ref){
+                open(OUT,">>",$prefix.".".$key.".".$format);
+                print OUT "${$hash_ref}{$key}";
+#                my @temp = split(" ", ${${$wig_ref}{$key}}[0]);
+                close OUT;
+        }
+}
+
+sub flush{
+        my ($hash_ref) = @_;
+        for my $key (keys %$hash_ref){
+                ${$hash_ref}{$key} = ''
+        }
+}
+
+
 
 sub set_platform{
 	my @platforms = ('solexa', '454', 'iontorrent', 'pacbio');
@@ -897,19 +1026,19 @@ sub finalize_sequence{
 
 sub create_manifest {
 	my ($iter, $sampleID, $refID, $mmode, $trim, $platform, $solexa_missmatches, $pair, $overhang, $reads, $ref, $redirect, $NFS_warn);
-	$iter = $_[0];
-	$sampleID = $_[1];
-	$refID = $_[2];
-	$mmode = $_[3];
-	$trim = $_[4];
-	$platform = $_[5];
-	$solexa_missmatches = $_[6];
-	$pair = $_[7];
-	$overhang = $_[8];
-	$reads = $_[9];
-	$ref = $_[10];
-	$redirect = $_[11];
-	$NFS_warn = $_[12];
+	$iter = shift;
+	$sampleID = shift;
+	$refID = shift;
+	$mmode = shift;
+	$trim = shift;
+	$platform = shift;
+	$solexa_missmatches = shift;
+	$pair = shift;
+	$overhang = shift;
+	$ref = shift;
+	$redirect = shift;
+	$NFS_warn = shift;
+	@reads = @_;
 
 	if ($NFS_warn){
 		$NFS_warn = ":cnfs=warn"
@@ -924,13 +1053,16 @@ sub create_manifest {
 	if ($mmode eq "mapping"){
 		print MANIFEST "\nreadgroup\nis_reference\ndata = $ref\nstrain = $refID\n";
 	}
-	print MANIFEST "\nreadgroup = reads\ndata = $reads\ntechnology = $technology[0]";
-	if ($pair){
-#		print MANIFEST "\nsegmentplacement = ---> <--- infoonly";
-		print MANIFEST "\nsegmentplacement = ---> <--- exclusion_criterion";
-		print MANIFEST "\ntemplatesize = -1 600 exclusion_criterion";
+
+	for (my $z=0; $z < @reads; $z++){
+		print MANIFEST "\nreadgroup = reads.$z\ndata = $reads[$z].fastq\ntechnology = $technology[0]";
+		if ($pair){
+#			print MANIFEST "\nsegmentplacement = ---> <--- infoonly";
+			print MANIFEST "\nsegmentplacement = ---> <--- exclusion_criterion";
+			print MANIFEST "\ntemplatesize = -1 600 exclusion_criterion";
+		}
+		print MANIFEST "\nstrain = $sampleID\n\n";
 	}
-	print MANIFEST "\nstrain = $sampleID\n";
 	close MANIFEST;
 }
 sub clean {
