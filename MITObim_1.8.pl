@@ -14,6 +14,8 @@ use List::Util qw< min max >;
 use POSIX qw(strftime);
 use POSIX qw(ceil);
 use File::Path 'rmtree';
+use threads;
+use threads::shared;
 
 my $startiteration = 1;
 my $enditeration = 1;
@@ -23,6 +25,7 @@ my ($miramode, $key, $val, $exit, $current_contiglength, $current_number_of_read
 my $splitting = 0;
 my @readfiles;
 my @baiting_files;
+my @threads;
 my $platform = "solexa";
 my $platform_settings;
 my $shme = "";
@@ -91,6 +94,7 @@ GetOptions (	"start=i" => \$startiteration,
 		"clean!" => \$clean,
 		"mirapath=s" => \$mirapath,
 		"maf=s" => \$maf,
+		"threads=i" => \$threads,
 #		"proofreading!" => \$proofreading,
 		"trimreads!" => \$trim,
 		"trimoverhang!" => \$trimoverhang,
@@ -261,9 +265,9 @@ foreach (@iteration){
 	if ($maf){
 		print "\nrecover backbone by running miraconvert on maf file\n\n";
 		if ($currentiteration<2){
-			@output= qx($miraconvert -f maf -t fasta -A "$platform_settings\_SETTINGS -CO:fnicpst=yes" $maf tmp);
+			@output= qx($miraconvert -f maf -t fasta -A "$platform_settings -CO:fnicpst=yes" $maf tmp);
 		}else{
-			@output= qx($miraconvert -f maf -t fasta -y $min_contig_cov -A "$platform_settings\_SETTINGS -CO:fnicpst=yes" $maf tmp);
+			@output= qx($miraconvert -f maf -t fasta -y $min_contig_cov -A "$platform_settings -CO:fnicpst=yes" $maf tmp);
 		}
 		$exit = $? >> 8;
 		unless (!$noshow){
@@ -303,71 +307,51 @@ foreach (@iteration){
 			copy "temp_baitfile.fasta","backbone_it$currentiteration\_initial_$refname.fna";
 		}
 	}
-	print "\nfishing readpool using mirabait (k = $k_bait)\n\n";
 
-	my $thread = 0;
-	&run_mirabait(abs_path, $thread, $mirabait, $k_bait, abs_path."/temp_baitfile.fasta", @readfiles[$thread], "$strainname-readpool-it$currentiteration", $noshow);
-	push(@baiting_files, abs_path."/mirabait.$thread/$strainname-readpool-it$currentiteration");
-	
-##	@output = (`mirabait -k $k_bait -n 1 temp_baitfile.fasta $readpool $strainname-$refname\_in.$platform 2>&1`);
-#	@output = qx($mirabait -k $k_bait -n 1 temp_baitfile.fasta $readpool $strainname-readpool-it$currentiteration);
-#	$exit = $? >> 8;
-#	unless (!$noshow){
-#		print "@output\n";
-#	}
-#	if (!-s "$strainname-readpool-it$currentiteration.fastq"){
-#		print "\nyour readpool does not contain any reads with reasonable match (k = $k_bait) to your reference - Maybe you ll want to different settings or even a different reference?\n\n";
-#		exit;
-#	}
-#	unless ($exit == 0){
-#		if (!$noshow){
-#			print "@output\n";
-#		}
-#	        print "\nmirabait seems to have failed - see detailed output above\n";
-#	        exit;
-#	}
-	
-	FINDPAIRS:
-	
-	unless (!$paired){
-		print "\nfinding pairs for baited reads\n\n";
-		copy ("$strainname-readpool-it$currentiteration.fastq", "$strainname-readpool-it$currentiteration-se.fastq") or die "copy failed: $!";
-		open(FH1,"<$strainname-readpool-it$currentiteration.fastq") or die $!;
-		open(FH2,">list");
-		my $index=1;
-		while (<FH1>) {
-			if ($index % 8 ==1 || $index % 8 ==5) {
-				chomp;
-				$_ =~ s/@//g;
-				($key, $val) = split /\//;
-				$hash{$key} .= exists $hash{$key} ? ",$val" : $val;
-			}
-			$index++;
-		}
+	for (my $x=0; $x<$threads; $x++){
+		push(@baiting_files,"")
+	}
 
-		for (keys %hash){
-			$_ =~ s/$/\/1/g;
-			print FH2 "$_\n";
-			$_ =~ s/1$/2/g;
-	        	print FH2 "$_\n";
-		}
-		close(FH1);
-		close(FH2);
-#		@output = (`miraconvert -f fastq -t fastq -n list $readpool $strainname-$refname\_in.$platform 2>&1`);
-		@output = qx($miraconvert -f fastq -t fastq -n list $readpool $strainname-readpool-it$currentiteration );
-		$exit = $? >> 8;
-		unless (!$noshow){
-			print "@output\n";
-		}
-		unless ($exit == 0){
-			if (!$noshow){
-				print "@output\n";
+	my $wd = abs_path;
+	print "\nbaiting readpool using $threads thread(s) at $wd\n\n";
+
+	if ($threads == 1){
+		my $thread = 0;
+
+		&baiting($wd, $mirabait, $miraconvert, $thread, $k_bait, "$wd/temp_baitfile.fasta", $readfiles[$thread], "$strainname-readpool-it$currentiteration-$thread", $noshow, $paired, \@baiting_files);
+	} else{
+#		print "\nmultithreading\n";
+		undef @threads;
+		for (my $thread=0; $thread<$threads; $thread++){
+                	my $t = threads->new(\&baiting, $wd, $mirabait, $miraconvert, $thread, $k_bait, "$wd/temp_baitfile.fasta", $readfiles[$thread], "$strainname-readpool-it$currentiteration-$thread", $noshow, $paired, \@baiting_files);
+                	push(@threads,$t);
+        	}
+        	foreach (@threads) {
+                	my $num = $_->join;
+			if ($num =~ /^failed/){
+				$num =~ s/failed_//;
+				print "Done with thread $num - failed\n"; 
+			} else {
+                		print "Done with thread $num\n";
+				$baiting_files[$num] = "$wd/mirabait.$num/$strainname-readpool-it$currentiteration-$num" 
 			}
-	        	print "\nmiraconvert seems to have failed - see detailed output above\n";
-	        	exit;
+        	}
+
+	}
+
+	my $ok_count = 0;
+	for (my $x=0; $x<$threads; $x++){
+		if ($baiting_files[$x]){
+			$ok_count++;
 		}
 	}
-	unlink("list");
+
+	if ($ok_count > 0){	
+		print "\n$ok_count thread(s) successfully baited reads\n";
+	} else{
+		print "\nmirabait failed to identify any reads with reasonable match (k = $k_bait) to your reference - Maybe you ll want to different settings or even a different reference?\n\n";
+		exit;
+	}
 	
 	MIRA:
 	print "\nrunning $miramode assembly using MIRA\n\n";
@@ -463,6 +447,88 @@ print "\nsuccessfully completed $enditeration iterations with MITObim! " . strft
 #
 #
 
+sub baiting {
+	my $base = shift;
+	my $mirabait = shift;
+	my $miraconvert = shift;
+	my $thread = shift;
+	my $kbait = shift;
+	my $ref = shift;
+	my $inreads = shift;
+	my $outprefix = shift;
+	my $v = shift;
+	my $paired = shift;
+	my ($array_ref) = @_;
+
+	sleep $thread;
+	my $ok = 0;
+	print "\nfishing readpool using mirabait (k = $k_bait) - thread $thread\n\n";
+	$ok = &run_mirabait($base, $thread, $mirabait, $k_bait, $ref, $inreads, $outprefix, $v);
+
+	if ($ok){
+		${$array_ref}[$thread] = "$base/mirabait.$thread/$outprefix";
+	}
+	FINDPAIRS:
+	
+	if ((${$array_ref}[$thread]) and ($paired)){
+		print "\nfinding pairs for baited reads - thread $thread\n\n";
+		$ok = 0;
+		$ok = &find_pairs(${$array_ref}[$thread], $inreads, $miraconvert);
+	}
+
+	if ($ok){
+		return $thread;
+	} else{
+		return "failed";
+	}
+}
+
+sub find_pairs{
+	my $mixed_reads = shift;
+	my $readpool = shift;
+	my $miraconvert = shift;
+	my $ok = 0;
+	
+	copy ("$mixed_reads.fastq", "$mixed_reads-se.fastq") or die "copy failed: $!";
+	open(FH1,"<$mixed_reads.fastq") or die $!;
+	open(FH2,">list");
+	my $index=1;
+	while (<FH1>) {
+		if ($index % 8 ==1 || $index % 8 ==5) {
+			chomp;
+			$_ =~ s/@//g;
+			($key, $val) = split /\//;
+			$hash{$key} .= exists $hash{$key} ? ",$val" : $val;
+		}
+		$index++;
+	}
+	for (keys %hash){
+		$_ =~ s/$/\/1/g;
+		print FH2 "$_\n";
+		$_ =~ s/1$/2/g;
+	       	print FH2 "$_\n";
+	}
+	close(FH1);
+	close(FH2);
+	my @output = qx($miraconvert -f fastq -t fastq -n list $readpool $mixed_reads);
+	my $exit = $? >> 8;
+	unless (!$noshow){
+		print "@output\n";
+	}
+	unlink("list");
+	unless ($exit == 0){
+		if (!$noshow){
+			print "@output\n";
+		}
+        	print "\nmiraconvert seems to have failed - see detailed output above\n";
+        	exit;
+	} else{
+		$ok = 1;
+	}
+
+	return $ok;
+}
+
 sub run_mirabait{
         my $base = shift;
         my $thread = shift;
@@ -472,7 +538,8 @@ sub run_mirabait{
         my $read_pool = shift;
         my $out_prefix = shift;
         my $verbose = shift;
-        sleep $thread;
+	my $status = 0;
+#        sleep $thread;
         mkdir "$base/mirabait.$thread" or die $!;
         chdir "$base/mirabait.$thread" or die $!;
         print "starting thread $thread\n";
@@ -498,11 +565,13 @@ sub run_mirabait{
 		exit;
         } else{
 		print "\nmirabait.$thread - ok!\n";
+		$status = 1;
 	}
 
 
         chdir "$base";
-        return $thread;
+#        return $thread;
+	return $status;
 }
 
 
@@ -1055,16 +1124,19 @@ sub create_manifest {
 	}
 
 	for (my $z=0; $z < @reads; $z++){
-		print MANIFEST "\nreadgroup = reads.$z\ndata = $reads[$z].fastq\ntechnology = $technology[0]";
-		if ($pair){
-#			print MANIFEST "\nsegmentplacement = ---> <--- infoonly";
-			print MANIFEST "\nsegmentplacement = ---> <--- exclusion_criterion";
-			print MANIFEST "\ntemplatesize = -1 600 exclusion_criterion";
+		if ($reads[$z]){
+			print MANIFEST "\nreadgroup = reads.$z\ndata = $reads[$z].fastq\ntechnology = $technology[0]";
+			if ($pair){
+#				print MANIFEST "\nsegmentplacement = ---> <--- infoonly";
+				print MANIFEST "\nsegmentplacement = ---> <--- exclusion_criterion";
+				print MANIFEST "\ntemplatesize = -1 600 exclusion_criterion";
+			}
+			print MANIFEST "\nstrain = $sampleID\n\n";
 		}
-		print MANIFEST "\nstrain = $sampleID\n\n";
 	}
 	close MANIFEST;
 }
+
 sub clean {
         my $interval = shift;
         my $cur = shift;
