@@ -242,9 +242,9 @@ foreach (@iteration){
 	if ($maf){
 		print "\nrecover backbone by running miraconvert on maf file\n\n";
 		if ($currentiteration<2){
-			@output= qx($miraconvert -f maf -t fasta -A "$platform_settings\_SETTINGS -CO:fnicpst=yes" $maf tmp);
+			@output= qx($miraconvert -f maf -t fasta -A "$platform_settings -CO:fnicpst=yes" $maf tmp);
 		}else{
-			@output= qx($miraconvert -f maf -t fasta -y $min_contig_cov -A "$platform_settings\_SETTINGS -CO:fnicpst=yes" $maf tmp);
+			@output= qx($miraconvert -f maf -t fasta -y $min_contig_cov -A "$platform_settings -CO:fnicpst=yes" $maf tmp);
 		}
 		$exit = $? >> 8;
 		unless (!$noshow){
