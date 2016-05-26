@@ -97,7 +97,7 @@ GetOptions (	"start=i" => \$startiteration,
 		"split!"	=>	\$splitting,
 		"min_cov=i"	=>	\$min_contig_cov,
 		"redirect_tmp=s" =>	\$redirect_temp,
-		"NFS_warn_only!" => $NFS_warn_only) or die "Incorrect usage!\n$USAGE";
+		"NFS_warn_only!" => \$NFS_warn_only) or die "Incorrect usage!\n$USAGE";
 
 
 print $PROGRAM; 
