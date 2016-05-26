@@ -17,25 +17,29 @@ my %wiggle = ();
 my %padded = ();
 my %unpadded = ();
 my ($instep, $inspan) = (0,0);
+my $help;
 
 my $command = $0;
 for (@ARGV){
         $command .= " $_";
 }
 
-my $USAGE="	USAGE: get_wiggle.pl <options>
+my $USAGE="\n	USAGE: get_wiggle.pl <options>
+
+		The default wiggle file produced by MIRA matches with the *padded* result file(s). This produces a wiggle file that matches the desired *unpadded* fasta file.
+
 		options:
 		-p, --prefix	<string>	Prefix for MIRA assembly files (mandatory), expects to find prefix.unpadded.fasta and prefix.padded.fasta
-		-w, --wiggle	<string>	Wiggle file (optional), if not specified script will expect to find a file *.wig in the same directory as assembly results";
+		-w, --wiggle	<string>	Wiggle file (optional), if not specified script will expect to find a file *.wig in the same directory as assembly results
+		-h, --help			Show this help text.\n\n";
 
 GetOptions ( 	"prefix=s" => \$prefix,
                 "wiggle=s" => \$wiggle,
+		"help!" => \$help,
 		"step=i" => \$window) or die "Incorrect usage!\n$USAGE";
 
-unless ($prefix) {
-	print "$USAGE\n";
-	exit;
-}
+print $USAGE and exit if $help;
+print $USAGE and exit if !$prefix;
 
 @files = &check_wigfiles($prefix, $wiggle);
 %wiggle = &parse_wig($files[2]);
@@ -44,10 +48,24 @@ unless ($prefix) {
 ($instep, $inspan) = &find_step_span(\%wiggle);
 &adjust_wiggle($inspan, $instep, \%wiggle, \%padded);
 for my $key (keys %padded){
-#	print ">$key\n$padded{$key}\n";
 	print "padded - $key: ".(length($padded{$key}))."\n";
 	print "unpadded - $key: ".(length($unpadded{$key}))."\n";
 	print "wiggle - $key: ".(scalar(@{$wiggle{$key}})-1)."\n";
+
+	&output_wiggle($prefix, @{$wiggle{$key}});
+}
+
+sub output_wiggle {
+	my $pre = shift;
+	my @wig = @_;
+	my $wig_head=shift(@wig);
+	my @wig_heads=split(/\|/, $wig_head);
+	open(my $OUT_FH, '>', $prefix.".unpadded.wig") or die $!;
+        print $OUT_FH "$wig_heads[0]\n$wig_heads[1]\n";
+        for (@wig){
+                print $OUT_FH $_."\n";
+        }
+	close($OUT_FH);
 }
 
 sub adjust_wiggle {
