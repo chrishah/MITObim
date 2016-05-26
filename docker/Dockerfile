@@ -25,9 +25,11 @@ RUN mkdir /home/src/scripts
 ADD scripts/MITObim_1.8.pl /home/src/scripts/
 ADD scripts/MITObim_1.6.pl /home/src/scripts/
 ADD scripts/interleave-fastqgz-MITOBIM.py /home/src/scripts/
+ADD scripts/get_wiggle.pl /home/src/scripts/
 RUN chmod a+x /home/src/scripts/MITObim_1.8.pl
 RUN chmod a+x /home/src/scripts/MITObim_1.6.pl
 RUN chmod a+x /home/src/scripts/interleave-fastqgz-MITOBIM.py
+RUN chmod a+x /home/src/get_wiggle.pl
 ADD testdata/testdata1.tgz /home/testdata/
 RUN mkdir /home/temp
 
