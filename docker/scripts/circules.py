@@ -3,7 +3,7 @@
 import sys,warnings
 import argparse
 
-VERSION="0.3"
+VERSION="0.4"
 DESCRIPTION='''
 circules - checks for circularity in nucleotide sequences - version: v.%s
 
@@ -32,6 +32,7 @@ parser = argparse.ArgumentParser(description=DESCRIPTION, prog='circules.py',
 parser.add_argument("-f", "--fasta", help="fasta file containing the sequence to be evaluate.", metavar="<FILE>", action="store")
 parser.add_argument("-p", "--prefix", help="prefix for output files (default = 'circular').", type=str, metavar="<STR>", action="store", default='circular')
 parser.add_argument("-e", "--exp_length", help="expected length (in bp) of circular molecule. If a candidate of length expected+-10%% is found, sequence will be clipped and written to file 'prefix.circular.fasta'.", type=int,  metavar="<INT>", default='0', action="store")
+parser.add_argument("-t", "--length_tolerance", help="length tolerance. Candidate fragments must have a length of 'expected length +/- t * expected length'. Default = 0.1.", type=float,  metavar="<FLOAT>", default='0.1', action="store")
 parser.add_argument("-k", "--kmer", help="kmer size. single number (default = 31) or range (e.g. 31-35).", type=str, default='31', action="store")
 parser.add_argument("-s", "--kmer_step", help="kmer step size (default = 2).", type=int, default='2', action="store")
 #parser.add_argument("-r", "--readpool", help="path to fastq reads to be used for evaluating circularity.", type=str, metavar="<FILE>", action="store")
@@ -98,27 +99,42 @@ for k in range(kmers[0],kmers[1],kmers[2]):
 	if len(clips) > 1:
 		print "Found %i possibilites for circularity:" %len(clips)
 		for l in sorted(clips):
-			print "\t-> clip length: %i (supported by %i %i-mers)" %(l, len(clips[l])/2, k)
-			if l < float(args.exp_length)*1.1 and l > float(args.exp_length)*0.9:
-				suggest.append(l)
+			print "\t-> suggested circular length: %i (supported by %i %i-mers)" %(l, len(clips[l])/2, k)
+#			if l < float(args.exp_length)*1.1 and l > float(args.exp_length)*0.9:
+#				suggest.append(l)
 
 	print ""
 
-	if suggest:
-		print "%i is within +-10%% of specified expected length: %i" %(suggest[0], args.exp_length)
-		if auto:
-			for s in seqs:
+if not clips:
+	print "Did not find any candidates for circularity\n"
+	sys.exit()
+
+if args.exp_length:
+	print "Evaluating candidate lengths - specified expected range is: %s - %s" %(str(float(args.exp_length)*(1+args.length_tolerance)), str(float(args.exp_length)*(1-args.length_tolerance)))
+	for l in sorted(clips):
+		if l < float(args.exp_length)*(1+args.length_tolerance) and l > float(args.exp_length)*(1-args.length_tolerance):
+			pass
+			#print "%i is within +-10%% of specified expected length: %i" %(l, args.exp_length)
+		else:
+			del(clips[l])
+
+	if clips:
+		print "\nFound candidates within the specified length range"
+		for s in seqs:
+			for l in sorted(clips):
 				#writing out clipped sequence
-				print "clip points: %i - %i -> writing sequence to '%s.circular.fasta'\n" %(int(clips[suggest[0]][0][0]), int(clips[suggest[0]][0][1]), args.prefix)
-				sequence = seqs[s][int(clips[suggest[0]][0][0]):int(clips[suggest[0]][0][1])]
-				out = open(args.prefix+'.circular.fasta','w')
-				out.write(">%s_ciruclar\n%s\n" %(s,sequence))
+				print "length: %s - clip points: %i - %i -> writing sequence to '%s.circular.%s.fasta'\n" %(str(l), int(clips[l][0][0]), int(clips[l][0][1]), args.prefix, str(l))
+				sequence = seqs[s][int(clips[l][0][0]):int(clips[l][0][1])]
+				out = open(args.prefix+'.circular.'+str(l)+'.fasta','w')
+				out.write(">%s_ciruclar_%s\n%s\n" %(s, str(l), sequence))
 				out.close()
-				
+			
 				#writing out file for testing circularity
-				out = open(args.prefix+'.for-testing.fasta','w')
-				clip_from = int(clips[suggest[0]][0][0])
-				clip_to = int(clips[suggest[0]][0][1])
+				out = open(args.prefix+'.'+str(l)+'.for-testing.fasta','w')
+				clip_from = int(clips[l][0][0])
+				clip_to = int(clips[l][0][1])
 				sequence = seqs[s][clip_to-500:clip_to]+seqs[s][clip_from:clip_from+500]
-				out.write(">test\n%s\n" %sequence)
+				out.write(">test_%s\n%s\n" %(str(l),sequence))
 				out.close()
+	else:
+		print "\nDid not find any candidates in the specified length range\n"
