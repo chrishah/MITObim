@@ -1,9 +1,9 @@
 #! /usr/bin/perl
 #
 # MITObim - mitochondrial baiting and iterative mapping
-# wrapper script version 1.8
-# Author: Christoph Hahn, 2012-2016
-# christoph.hahn@nhm.uio.no
+# wrapper script version 1.9
+# Author: Christoph Hahn, 2012-2017
+# christoph.hahn@uni-graz.at
 
 use strict;
 use warnings;
@@ -918,7 +918,7 @@ sub create_manifest {
 	open (MANIFEST,">manifest.conf") or die $!;
 	print MANIFEST "#manifest file for iteration $iter created by MITObim\n\nproject = $sampleID-$refID
 	\njob = genome,$mmode,accurate
-	\nparameters = -NW:mrnl=0$NFS_warn -AS:nop=1 $redirect $overhang $platform $trim -CO:msr=no $solexa_missmatches\n";
+	\nparameters = -NW:mrnl=0:cac=warn$NFS_warn -AS:nop=1 $redirect $overhang $platform $trim -CO:msr=no $solexa_missmatches\n";
 	my @technology = split("_",$platform);
 	#-notraceinfo -
 	if ($mmode eq "mapping"){
