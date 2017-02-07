@@ -96,7 +96,7 @@ for k in range(kmers[0],kmers[1],kmers[2]):
 			i+=1
 		print "Done!\n"
 	suggest = []
-	if len(clips) > 1:
+	if len(clips) >=  1:
 		print "Found %i possibilites for circularity:" %len(clips)
 		for l in sorted(clips):
 			print "\t-> suggested circular length: %i (supported by %i %i-mers)" %(l, len(clips[l])/2, k)
