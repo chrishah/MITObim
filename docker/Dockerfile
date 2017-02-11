@@ -33,7 +33,7 @@ RUN chmod a+x /home/src/scripts/MITObim_1.8.pl
 RUN chmod a+x /home/src/scripts/MITObim_1.6.pl
 RUN chmod a+x /home/src/scripts/interleave-fastqgz-MITOBIM.py
 RUN chmod a+x /home/src/scripts/get_wiggle.pl
-RUN chmod a+x /home/src/scripts/circules
+RUN chmod a+x /home/src/scripts/circules.py
 RUN mkdir /home/temp
 
 RUN ln -s /home/src/mira_4.0.2/mira* /usr/bin
