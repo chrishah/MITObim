@@ -26,11 +26,14 @@ ADD scripts/MITObim_1.8.pl /home/src/scripts/
 ADD scripts/MITObim_1.6.pl /home/src/scripts/
 ADD scripts/interleave-fastqgz-MITOBIM.py /home/src/scripts/
 ADD scripts/get_wiggle.pl /home/src/scripts/
+ADD scripts/circules.py /home/src/scripts/
+ADD testdata/testdata1.tgz /home/testdata/
+
 RUN chmod a+x /home/src/scripts/MITObim_1.8.pl
 RUN chmod a+x /home/src/scripts/MITObim_1.6.pl
 RUN chmod a+x /home/src/scripts/interleave-fastqgz-MITOBIM.py
 RUN chmod a+x /home/src/scripts/get_wiggle.pl
-ADD testdata/testdata1.tgz /home/testdata/
+RUN chmod a+x /home/src/scripts/circules
 RUN mkdir /home/temp
 
 RUN ln -s /home/src/mira_4.0.2/mira* /usr/bin
