@@ -125,6 +125,7 @@ optional:
 		--mirapath <string>     full path to MIRA binaries (only needed if MIRA is not in PATH)
 		--redirect_tmp		redirect temporary output to this location (useful in case you are running MITObim on an NFS mount)
 		--NFS_warn_only		allow MIRA to run on NFS mount without aborting -  warn only (expert option - see MIRA documentation 'check_nfs')
+		--version		display MITObim version
 		
 examples:
 		./MITObim.pl -start 1 -end 5 -sample StrainX -ref reference-mt -readpool illumina_readpool.fastq -maf initial_assembly.maf
