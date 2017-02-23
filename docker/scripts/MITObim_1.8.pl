@@ -32,7 +32,7 @@ my (@reads, @output, @path, @current_contig_stats, @contiglengths, @number_of_re
 my %hash;
 my $PROGRAM = "\nMITObim - mitochondrial baiting and iterative mapping\n";
 my $VERSION = "version 1.8\n";
-my $AUTHOR = "author: Christoph Hahn, (c) 2012-2016\n";
+my $AUTHOR = "author: Christoph Hahn, (c) 2012-2017\n";
 my $cite = "\nif you found MITObim useful, please cite:
 Hahn C, Bachmann L and Chevreux B. (2013) Reconstructing mitochondrial genomes directly from genomic next-generation sequencing reads -
 a baiting and iterative mapping approach. Nucl. Acids Res. 41(13):e129. doi: 10.1093/nar/gkt371\n\n";
@@ -97,11 +97,14 @@ GetOptions (	"start=i" => \$startiteration,
 		"split!"	=>	\$splitting,
 		"min_cov=i"	=>	\$min_contig_cov,
 		"redirect_tmp=s" =>	\$redirect_temp,
+		"version"	=>	\my $showversion,
 		"NFS_warn_only!" => \$NFS_warn_only) or die "Incorrect usage!\n$USAGE";
+
 
 
 print $PROGRAM; 
 print $VERSION; 
+exit if $showversion;
 print $AUTHOR; 
 
 print $USAGE and exit if $help;

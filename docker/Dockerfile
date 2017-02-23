@@ -1,6 +1,6 @@
 FROM ubuntu:16.04
 
-MAINTAINER Christoph Hahn <chrisi.hahni@gmail.com>
+MAINTAINER Christoph Hahn <christoph.hahn@uni-graz.at>
 
 RUN apt-get update && apt-get upgrade -y
 

@@ -12,7 +12,7 @@ VERSIONS
 
 We recommend to use the latest version but see note below regarding availability of the proofreading algorithm.
 
-Copyright Christoph Hahn 2012-2016
+Copyright Christoph Hahn 2012-2017
 
 CONTACT
 -------
@@ -21,7 +21,7 @@ We encourage users to post any questions/comments/problems you might have concer
 
 or (__*in emergency situations*__)
 
-contact me directly under <c.hahn@hull.ac.uk>.
+contact me directly under <christoph.hahn@uni-graz.at>.
 
 I'll try respond to you asap! If you don't hear from me within a few days, please just __send another reminder__!
 
@@ -44,7 +44,7 @@ PREREQUISITES
   - MIRA 3.4.1.1 (for the use with MITObim 1.6 - download [here](http://sourceforge.net/projects/mira-assembler/files/MIRA/Older%20releases/V3.4.0/)).
   - **Precompiled** binaries for MIRA are available for Linux and OSX. An excellent guide to MIRA is available [here](http://mira-assembler.sourceforge.net/docs/DefinitiveGuideToMIRA.html "The definitive Guide to MIRA").
 
-As an **alternative**, I have generated a [docker](https://www.docker.com/) image for MITObim (see [here](https://registry.hub.docker.com/u/chrishah/mitobim/)). Find out what docker is [here](https://www.docker.com/whatisdocker/). The MITObim image contains a stripped down version of Ubuntu 14.04 and all necessary executables and dependencies to run the latest version of MITObim. Docker is compatible with all major operating systems, including Mac OSX and Windows (see [here](https://docs.docker.com/installation/#installation)). The MITObim image has been tested on Ubuntu, but it should work without problem in any other system where docker was successfully installed. 
+As an **alternative**, I have generated a [docker](https://www.docker.com/) image for MITObim (see [here](https://registry.hub.docker.com/u/chrishah/mitobim/)). Find out what docker is [here](https://www.docker.com/whatisdocker/). The MITObim image contains a stripped down version of Ubuntu 16.04 and all necessary executables and dependencies to run the latest version of MITObim. Docker is compatible with all major operating systems, including Mac OSX and Windows (see [here](https://docs.docker.com/installation/#installation)). The MITObim image has been tested on Ubuntu, but it should work without problem in any other system where docker was successfully installed. 
 
 To install docker on ubuntu should be as easy as:
 ```bash
@@ -93,9 +93,10 @@ Test the wrapper script by doing:
 
 which should display the usage (NOTE: From MITObim 1.7 onwards the `-strain` flag has been renamed to `-sample`), e.g.:
 ```
+
 MITObim - mitochondrial baiting and iterative mapping
 version 1.8
-author: Christoph Hahn, (c) 2012-2015
+author: Christoph Hahn, (c) 2012-2016
 
 usage: ./MITObim.pl <parameters>
 	 	
@@ -124,10 +125,11 @@ optional:
 		--mirapath <string>     full path to MIRA binaries (only needed if MIRA is not in PATH)
 		--redirect_tmp		redirect temporary output to this location (useful in case you are running MITObim on an NFS mount)
 		--NFS_warn_only		allow MIRA to run on NFS mount without aborting -  warn only (expert option - see MIRA documentation 'check_nfs')
-
+		
 examples:
 		./MITObim.pl -start 1 -end 5 -sample StrainX -ref reference-mt -readpool illumina_readpool.fastq -maf initial_assembly.maf
 		./MITObim.pl -end 10 --quick reference.fasta -sample StrainY -ref reference-mt -readpool illumina_readpool.fastq
+
 ```
 
 The archive testdata1 contains three files:
