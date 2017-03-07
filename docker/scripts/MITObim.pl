@@ -38,25 +38,25 @@ Hahn C, Bachmann L and Chevreux B. (2013) Reconstructing mitochondrial genomes d
 a baiting and iterative mapping approach. Nucl. Acids Res. 41(13):e129. doi: 10.1093/nar/gkt371\n\n";
 my $USAGE = 	"\nusage: ./MITObim.pl <parameters>
 	 	\nparameters:
-		-start <int>		iteration to start with, default=1
-		-end <int>		iteration to end with, default=1
-		-sample <string>	sampleID (please don't use '.' in the sampleID). If resuming, the sampleID needs to be identical to that of the previous run.
-		-ref <string>		referenceID as used in initial MIRA assembly
-		-readpool <FILE>	readpool in fastq format (*.gz is also allowed)
-		-maf <FILE>		maf file from previous MIRA assembly
+		-start <int>		iteration to start with (default=0, when using '-quick' reference)
+		-end <int>		iteration to end with (default=startiteration, i.e. if not specified otherwise stop after 1 iteration)
+		-sample <string>	sampleID (please don't use '.' in the sampleID). If resuming, the sampleID needs to be identical to that of the previous iteration / MIRA assembly.
+		-ref <string>		referenceID. If resuming, use the same as in previous iteration/initial MIRA assembly.
+		-readpool <FILE>	readpool in fastq format (*.gz is also allowed). read pairs need to be interleaved for full functionality of the '-pair' option below.
+                -quick <FILE>           reference sequence to be used as bait in fasta format
+                -maf <FILE>             extracts reference from maf file created by previous MITObim iteration/MIRA assembly (resume)
 		\noptional:
-		--quick <FILE>		starts process with initial baiting using provided fasta reference
 		--kbait <int>		set kmer for baiting stringency (default: 31)
 		--platform		specify sequencing platform (default: 'solexa'; other options: 'iontor', '454', 'pacbio')
-		--denovo		runs MIRA in denovo mode (default: mapping)
-		--pair			finds pairs after baiting (relies on /1 and /2 header convention for read pairs) (default: no)
+		--denovo		runs MIRA in denovo mode
+		--pair			extend readpool to contain full read pairs, even if only one member was baited (relies on /1 and /2 header convention for read pairs) (default: no).
 		--verbose		show detailed output of MIRA modules (default: no)
 		--split			split reference at positions with more than 5N (default: no)
 		--help			shows this helpful information
 		--clean                 retain only the last 2 iteration directories (default: no)
 		--trimreads		trim data (default: no; we recommend to trim beforehand and feed MITObim with pre trimmed data)
-		--trimoverhang		trim overhang up- and downstream of reference (default: no)
-		--missmatch <int>	number of allowed missmatches in mapping - only for illumina data (default: 15% of avg. read length)
+		--trimoverhang		trim overhang up- and downstream of reference, i.e. don't extend the bait, just re-assemble (default: no)
+		--mismatch <int>	number of allowed mismatches in mapping - only for illumina data (default: 15% of avg. read length)
 		--min_cov <int>		minimum average coverage of contigs to be retained (default: 0 - off)
 		--min_len <int>		minimum length of contig to be retained as backbone (default: 0 - off)
 		--mirapath <string>     full path to MIRA binaries (only needed if MIRA is not in PATH)
@@ -65,7 +65,7 @@ my $USAGE = 	"\nusage: ./MITObim.pl <parameters>
 		--version		display MITObim version
 		\nexamples:
 		./MITObim.pl -start 1 -end 5 -sample StrainX -ref reference-mt -readpool illumina_readpool.fastq -maf initial_assembly.maf
-		./MITObim.pl -end 10 --quick reference.fasta -sample StrainY -ref reference-mt -readpool illumina_readpool.fastq\n\n";
+		./MITObim.pl -end 10 -quick reference.fasta -sample StrainY -ref reference-mt -readpool illumina_readpool.fastq\n\n";
 #		--proofread		applies proofreading (atm only to be used if starting the process from a single short seed reference)
 #		--readlength <int>	read length of illumina library, default=150, relevant only for proofreading
 #		--insert <int>		insert size of illumina library, default=300, relevant only for proofreading
@@ -96,7 +96,7 @@ GetOptions (	"start=i" => \$startiteration,
 #		"proofreading!" => \$proofreading,
 		"trimreads!" => \$trim,
 		"trimoverhang!" => \$trimoverhang,
-		"missmatch=i" => \$MM,
+		"mismatch=i" => \$MM,
 		"platform=s" => \$platform,
 #		"readlength=i" => \$readlength,
 #		"insertsize=i" => \$insertsize,
@@ -221,14 +221,14 @@ if ($proofreading){
 	print "readlength: $readlength\n";
 	print "insertsize: $insertsize\n";
 	$MM = 0;
-	print "number of allowed missmatches in proofreading assembly: $MM\n";
+	print "number of allowed mismatches in proofreading assembly: $MM\n";
 	$shme = "-AL:shme=$MM";
 }elsif ((!$proofreading) && (!$mode) && ($platform eq "solexa")){
 	if ($MM == -1){
-		print "number of missmatches in mapping assembly: default (15% of average read length loaded)\n";
+		print "number of mismatches in mapping assembly: default (15% of average read length loaded)\n";
 		$shme = "";
 	}else {
-		print "number of missmatches in mapping assembly: $MM\n";
+		print "number of mismatches in mapping assembly: $MM\n";
 		$shme = "-AL:shme=$MM";
 	}
 	print "proofreading: off\n";
@@ -1018,14 +1018,14 @@ sub finalize_sequence{
 }
 
 sub create_manifest {
-	my ($iter, $sampleID, $refID, $mmode, $trim, $platform, $solexa_missmatches, $pair, $overhang, $reads, $ref, $redirect, $NFS_warn);
+	my ($iter, $sampleID, $refID, $mmode, $trim, $platform, $solexa_mismatches, $pair, $overhang, $reads, $ref, $redirect, $NFS_warn);
 	$iter = $_[0];
 	$sampleID = $_[1];
 	$refID = $_[2];
 	$mmode = $_[3];
 	$trim = $_[4];
 	$platform = $_[5];
-	$solexa_missmatches = $_[6];
+	$solexa_mismatches = $_[6];
 	$pair = $_[7];
 	$overhang = $_[8];
 	$reads = $_[9];
@@ -1040,7 +1040,7 @@ sub create_manifest {
 	open (MANIFEST,">manifest.conf") or die $!;
 	print MANIFEST "#manifest file for iteration $iter created by MITObim\n\nproject = $sampleID-$refID
 	\njob = genome,$mmode,accurate
-	\nparameters = -NW:mrnl=0:cac=warn$NFS_warn -AS:nop=1 $redirect $overhang $platform $trim -CO:msr=no $solexa_missmatches\n";
+	\nparameters = -NW:mrnl=0:cac=warn$NFS_warn -AS:nop=1 $redirect $overhang $platform $trim -CO:msr=no $solexa_mismatches\n";
 	my @technology = split("_",$platform);
 	#-notraceinfo -
 	if ($mmode eq "mapping"){
