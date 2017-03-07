@@ -7,6 +7,7 @@ VERSIONS
 --------
 
 1.9 (stable - relies on MIRA 4.0.2)
+This version is archived on Zenodo: [![DOI](https://zenodo.org/badge/6140198.svg)](https://zenodo.org/badge/latestdoi/6140198)
 
 1.6 (stable - relies on MIRA 3.4.1.1)
 

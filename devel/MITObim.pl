@@ -1,7 +1,7 @@
 #! /usr/bin/perl
 #
 # MITObim - mitochondrial baiting and iterative mapping
-# wrapper script version 1.8
+# wrapper script version 1.9
 # Author: Christoph Hahn, 2012-2017
 # christoph.hahn@uni-graz.at
 
@@ -15,10 +15,10 @@ use POSIX qw(strftime);
 use POSIX qw(ceil);
 use File::Path 'rmtree';
 
-my $startiteration = 1;
-my $enditeration = 1;
+my $startiteration = 0;
+my $enditeration = 0;
 
-my ($quick, $noshow, $help, $strainname, $paired, $mode, $refname, $readpool, $maf, $proofreading, $readlength, $insertsize, $MM, $trim, $trimoverhang, $k_bait, $clean, $clean_interval, $min_contig_cov) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 31, 0, 2, 0);
+my ($quick, $noshow, $help, $strainname, $paired, $mode, $refname, $readpool, $maf, $proofreading, $readlength, $insertsize, $MM, $trim, $trimoverhang, $k_bait, $clean, $clean_interval, $min_contig_cov, $min_contig_len) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 31, 0, 2, 0, 0);
 my ($miramode, $key, $val, $exit, $current_contiglength, $current_number_of_reads, $current_number_of_contigs);
 my $splitting = 0;
 my $platform = "solexa";
@@ -31,47 +31,52 @@ my ($mirapath, $mira, $miraconvert, $mirabait) = ("", "mira", "miraconvert", "mi
 my (@reads, @output, @path, @current_contig_stats, @contiglengths, @number_of_reads, @number_of_contigs);
 my %hash;
 my $PROGRAM = "\nMITObim - mitochondrial baiting and iterative mapping\n";
-my $VERSION = "version 1.8\n";
+my $VERSION = "version 1.9\n";
 my $AUTHOR = "author: Christoph Hahn, (c) 2012-2017\n";
 my $cite = "\nif you found MITObim useful, please cite:
 Hahn C, Bachmann L and Chevreux B. (2013) Reconstructing mitochondrial genomes directly from genomic next-generation sequencing reads -
 a baiting and iterative mapping approach. Nucl. Acids Res. 41(13):e129. doi: 10.1093/nar/gkt371\n\n";
 my $USAGE = 	"\nusage: ./MITObim.pl <parameters>
 	 	\nparameters:
-		-start <int>		iteration to start with, default=1
-		-end <int>		iteration to end with, default=1
-		-sample <string>	sampleID as used in initial MIRA assembly
-		-ref <string>		referenceID as used in initial MIRA assembly
-		-readpool <FILE>	readpool in fastq format (*.gz is also allowed)
-		-maf <FILE>		maf file from previous MIRA assembly
+		-start <int>		iteration to start with (default=0, when using '-quick' reference)
+		-end <int>		iteration to end with (default=startiteration, i.e. if not specified otherwise stop after 1 iteration)
+		-sample <string>	sampleID (please don't use '.' in the sampleID). If resuming, the sampleID needs to be identical to that of the previous iteration / MIRA assembly.
+		-ref <string>		referenceID. If resuming, use the same as in previous iteration/initial MIRA assembly.
+		-readpool <FILE>	readpool in fastq format (*.gz is also allowed). read pairs need to be interleaved for full functionality of the '-pair' option below.
+                -quick <FILE>           reference sequence to be used as bait in fasta format
+                -maf <FILE>             extracts reference from maf file created by previous MITObim iteration/MIRA assembly (resume)
 		\noptional:
-		--quick <FILE>		starts process with initial baiting using provided fasta reference
 		--kbait <int>		set kmer for baiting stringency (default: 31)
 		--platform		specify sequencing platform (default: 'solexa'; other options: 'iontor', '454', 'pacbio')
-		--denovo		runs MIRA in denovo mode (default: mapping)
-		--pair			finds pairs after baiting (relies on /1 and /2 header convention for read pairs) (default: no)
+		--denovo		runs MIRA in denovo mode
+		--pair			extend readpool to contain full read pairs, even if only one member was baited (relies on /1 and /2 header convention for read pairs) (default: no).
 		--verbose		show detailed output of MIRA modules (default: no)
 		--split			split reference at positions with more than 5N (default: no)
 		--help			shows this helpful information
 		--clean                 retain only the last 2 iteration directories (default: no)
 		--trimreads		trim data (default: no; we recommend to trim beforehand and feed MITObim with pre trimmed data)
-		--trimoverhang		trim overhang up- and downstream of reference (default: no)
-		--missmatch <int>	number of allowed missmatches in mapping - only for illumina data (default: 15% of avg. read length)
-		--min_cov <int>		minimum average coverage of contigs to be retained (default: off)
+		--trimoverhang		trim overhang up- and downstream of reference, i.e. don't extend the bait, just re-assemble (default: no)
+		--mismatch <int>	number of allowed mismatches in mapping - only for illumina data (default: 15% of avg. read length)
+		--min_cov <int>		minimum average coverage of contigs to be retained (default: 0 - off)
+		--min_len <int>		minimum length of contig to be retained as backbone (default: 0 - off)
 		--mirapath <string>     full path to MIRA binaries (only needed if MIRA is not in PATH)
 		--redirect_tmp		redirect temporary output to this location (useful in case you are running MITObim on an NFS mount)
 		--NFS_warn_only		allow MIRA to run on NFS mount without aborting -  warn only (expert option - see MIRA documentation 'check_nfs')
 		--version		display MITObim version
 		\nexamples:
 		./MITObim.pl -start 1 -end 5 -sample StrainX -ref reference-mt -readpool illumina_readpool.fastq -maf initial_assembly.maf
-		./MITObim.pl -end 10 --quick reference.fasta -sample StrainY -ref reference-mt -readpool illumina_readpool.fastq\n\n";
+		./MITObim.pl -end 10 -quick reference.fasta -sample StrainY -ref reference-mt -readpool illumina_readpool.fastq\n\n";
 #		--proofread		applies proofreading (atm only to be used if starting the process from a single short seed reference)
 #		--readlength <int>	read length of illumina library, default=150, relevant only for proofreading
 #		--insert <int>		insert size of illumina library, default=300, relevant only for proofreading
 
+
+if (scalar @ARGV < 2){
+	die "$PROGRAM\n$VERSION\n$USAGE";
+}
 my $command = $0;
 for (@ARGV){
-        $command .= " $_";
+       	$command .= " $_";
 }
 
 GetOptions (	"start=i" => \$startiteration,
@@ -91,12 +96,13 @@ GetOptions (	"start=i" => \$startiteration,
 #		"proofreading!" => \$proofreading,
 		"trimreads!" => \$trim,
 		"trimoverhang!" => \$trimoverhang,
-		"missmatch=i" => \$MM,
+		"mismatch=i" => \$MM,
 		"platform=s" => \$platform,
 #		"readlength=i" => \$readlength,
 #		"insertsize=i" => \$insertsize,
 		"split!"	=>	\$splitting,
 		"min_cov=i"	=>	\$min_contig_cov,
+		"min_len=i"	=>	\$min_contig_len,
 		"redirect_tmp=s" =>	\$redirect_temp,
 		"version"	=>	\my $showversion,
 		"NFS_warn_only!" => \$NFS_warn_only) or die "Incorrect usage!\n$USAGE";
@@ -109,20 +115,26 @@ exit if $showversion;
 print $AUTHOR; 
 
 print $USAGE and exit if $help;
-print $USAGE and exit if !$readpool;
 unless ($quick){
-        print $USAGE and exit if !$maf;
+        print "$USAGE\n\nYou need to specify a bait, either a maf file from a previous assembly (use '-maf'), or a fasta file (use '--quick')\n" and exit if !$maf;
 }
-print $USAGE and exit if !$refname;
+
+print "$USAGE\n\nPlease specify a name for your reference - use '-ref'\n" and exit if !$refname;
+print "$USAGE\n\nPlease specify a name for your sample - use '-sample' (if resuming make sure you use the same name as in the previous run)\n" and exit if !$strainname;
+print "$USAGE\n\nPlease specify a readpool in fastq format - use '-readpool'\n" and exit if !$readpool;
 
 $readpool=abs_path($readpool);
 unless (-e $readpool){
-	print "Cant find the readpool. Is the path correct?\n";
+	die "Cant find the readpool. Is the path correct?\n";
 }
+
 if ($maf){
 	$maf=abs_path($maf);
 	unless (-e $maf){
-		print "Cant find *.maf file. Is the path correct?\n";
+		die "Cant find *.maf file. Is the path correct?\n";
+	}
+	unless ($startiteration){
+		die "\nPlease specify the startiteration - use '-start'\n"		
 	}
 }
 
@@ -131,18 +143,23 @@ if ($maf){
 if ($quick){
 	$quick=abs_path($quick);
         unless (-e $quick){
-		print "quick option selected but is the path to the file correct?\n";
-		exit 1;
+		die "\nquick option selected but is the path to the file correct?\n";
 	}
 	print "\nquick option selected! -maf option will be ignored (if given)\n";
 	$maf = 0;
-	$startiteration = 0;
+	unless ($startiteration){
+		$startiteration = 0;
+	}
 }
-print $USAGE and exit if ($startiteration > $enditeration);
-unless (((-e $maf)||($quick)) && (-e $readpool)){
-        print "\nAre readpool AND maf/reference files there?\n";
-        exit 1;
+unless ($enditeration){
+	$enditeration = $startiteration;
 }
+
+print "$USAGE\n\nStartiteration cannot be larger than enditeration\n" and exit if ($startiteration > $enditeration);
+if (-d "iteration$startiteration"){
+	die "$USAGE\n\nMITObim refuses to overwrite the existing directory: iteration$startiteration - specify another startiteration ('-start') or clean up first\n\n";
+}
+
 if ($mirapath){
 	if (-e "$mirapath/mira"){
 		print "found executables in the path specified by the user - good!\n";
@@ -188,6 +205,7 @@ print "assembly mode: $mode (mapping=0, denovo=1)\n";
 print "verbose: $noshow (off=0, on=1)\n";
 print "split: $splitting (off=0, on=1)\n";
 print "minimum avg. coverage: $min_contig_cov (off=0)\n";
+print "minimum contig length: $min_contig_len (off=0)\n";
 print "clean: $clean (off=0, on=1)\n";
 print "trim reads: $trim (off=0, on=1)\n";
 print "trim overhang: $trimoverhang (no=0, yes=1)\n";
@@ -203,14 +221,14 @@ if ($proofreading){
 	print "readlength: $readlength\n";
 	print "insertsize: $insertsize\n";
 	$MM = 0;
-	print "number of allowed missmatches in proofreading assembly: $MM\n";
+	print "number of allowed mismatches in proofreading assembly: $MM\n";
 	$shme = "-AL:shme=$MM";
 }elsif ((!$proofreading) && (!$mode) && ($platform eq "solexa")){
 	if ($MM == -1){
-		print "number of missmatches in mapping assembly: default (15% of average read length loaded)\n";
+		print "number of mismatches in mapping assembly: default (15% of average read length loaded)\n";
 		$shme = "";
 	}else {
-		print "number of missmatches in mapping assembly: $MM\n";
+		print "number of mismatches in mapping assembly: $MM\n";
 		$shme = "-AL:shme=$MM";
 	}
 	print "proofreading: off\n";
@@ -232,7 +250,7 @@ my @iteration = ($startiteration .. $enditeration);
 foreach (@iteration){
 	chomp;
 	my $currentiteration = $_;
-	mkdir "iteration$currentiteration" or die "MITObim will not overwrite an existing directory: iteration$currentiteration\n";
+	mkdir "iteration$currentiteration" or die "\nMITObim refuses to overwrite existing directory: iteration$currentiteration - Please clean up before resuming\n\n";
 	chdir "iteration$currentiteration" or die $!;
 	print "\n==============\n";
 	print " ITERATION $currentiteration\n";
@@ -245,59 +263,33 @@ foreach (@iteration){
 		
 	if ($maf){
 		print "\nrecover backbone by running miraconvert on maf file\n\n";
-		if ($currentiteration<2){
-			@output= qx($miraconvert -f maf -t fasta -A "$platform_settings -CO:fnicpst=yes" $maf tmp);
-		}else{
-			@output= qx($miraconvert -f maf -t fasta -y $min_contig_cov -A "$platform_settings -CO:fnicpst=yes" $maf tmp);
-		}
-		$exit = $? >> 8;
-		unless (!$noshow){
-			print "@output\n";
-		}
-		unless ($exit == 0){
-			if (!$noshow){
-				print "@output\n";
-			}
-			print "\nmiraconvert seems to have failed - see detailed output above\n";
-			exit;
-		}
-#		if ( ((($mode) && ($currentiteration > 1)) && (!$quick)) || ((($mode) && ($currentiteration >= 1)) && ($quick)) ){
-#			open(FH1,"<tmp_$strainname.unpadded.fasta") or die "$!";
-#		}else{
-		open(FH1,"<tmp_$strainname.unpadded.fasta") or die "$!\nIs the sampleID identical as in the initial MIRA assembly?\n";
-#		}
-		open(FH2,">backbone_it$currentiteration\_initial_$refname.fna") or die $!;
-		while (<FH1>) {
-			$_ =~ s/x/N/g;
-			print FH2 $_; 
-		}
-		close(FH1);
-		close(FH2);
-		unlink glob ("tmp*");
+
+		&extract_backbone($strainname, $refname, $currentiteration, $miraconvert, $platform_settings, $maf, $min_contig_cov, $min_contig_len, $noshow, "backbone_it$currentiteration\_initial_$refname.fna");
 	}
 	MIRABAIT:
 	unless ($maf){
 		print "\nquick option baits reads from provided reference in iteration 0\n";
 		copy("$quick", "backbone_it$currentiteration\_initial_$refname.fna") or die "copy failed: $!";		
 	}
-	&check_ref_length("backbone_it$currentiteration\_initial_$refname.fna","temp_baitfile.fasta",29800,$k_bait);
+
+	# check length of contig and split in case it's longer than 29800 bp, which is the limit for mirabait
+	&check_ref_length("backbone_it$currentiteration\_initial_$refname.fna", "baitfile.fasta", 29800, $k_bait);
 
 	if ($splitting){
-		&remove_unmapped_contigs("temp_baitfile_backup.fasta","temp_baitfile.fasta");
-		if (-e "temp_baitfile_backup.fasta"){	#this file has only been created if splitting contigs was necessary
-			copy "temp_baitfile.fasta","backbone_it$currentiteration\_initial_$refname.fna";
+		&remove_unmapped_contigs("baitfile_backup.fasta", $min_contig_len, "baitfile.fasta");
+		if (-e "baitfile_backup.fasta"){	#this file has only been created if splitting contigs was necessary
+			copy "baitfile.fasta","backbone_it$currentiteration\_initial_$refname.fna";
 		}
 	}
 	print "\nfishing readpool using mirabait (k = $k_bait)\n\n";
 	
-#	@output = (`mirabait -k $k_bait -n 1 temp_baitfile.fasta $readpool $strainname-$refname\_in.$platform 2>&1`);
-	@output = qx($mirabait -k $k_bait -n 1 temp_baitfile.fasta $readpool $strainname-readpool-it$currentiteration);
+	@output = qx($mirabait -k $k_bait -n 1 baitfile.fasta $readpool $strainname-readpool-it$currentiteration);
 	$exit = $? >> 8;
 	unless (!$noshow){
 		print "@output\n";
 	}
 	if (!-s "$strainname-readpool-it$currentiteration.fastq"){
-		print "\nyour readpool does not contain any reads with reasonable match (k = $k_bait) to your reference - Maybe you ll want to different settings or even a different reference?\n\n";
+		print "\nyour readpool does not contain any reads with reasonable match (k = $k_bait) to your reference - Maybe you ll want to try different settings or even a different reference?\n\n";
 		exit;
 	}
 	unless ($exit == 0){
@@ -368,16 +360,9 @@ foreach (@iteration){
 	}
 	
 	if ($redirect_temp) {
-		my $tmp_link = readlink("$strainname-$refname\_assembly/$strainname-$refname\_d_tmp");
-		rmtree ("$strainname-$refname\_assembly/$strainname-$refname\_d_tmp") or die $!;
-		mkdir "$strainname-$refname\_assembly/$strainname-$refname\_d_tmp/" or die $1; 
-		my @files = glob("$tmp_link/*");			
-		for (@files) {
-			move ("$_", "$strainname-$refname\_assembly/$strainname-$refname\_d_tmp/") or die $!;
-		}
-		rmtree ("$tmp_link") or die $!;
+		&fetch_from_tmp($strainname, $refname);
 	}
-	
+
 	@path = abs_path;
         push (@path, "/$strainname-$refname\_assembly/$strainname-$refname\_d_results/$strainname-$refname\_out.maf");
         $maf = join("",@path);
@@ -385,6 +370,48 @@ foreach (@iteration){
                 print "maf file is not there \n";
                 exit;
         }
+
+	if (($paired) && ($miramode eq "mapping")){ # && ($currentiteration >= 1)){
+
+                print "preparing to re-assemble using previously unused paired reads\n";
+                &extract_backbone($strainname, $refname, $currentiteration, $miraconvert, $platform_settings, $maf, $min_contig_cov, $min_contig_len, $noshow, "backbone_it$currentiteration\_$refname-pe.fna");
+		# cleanup - rename initial assembly data
+                move ("manifest.conf", "manifest.se.conf") or die $!;
+                move ("$strainname-$refname\_assembly", "$strainname-$refname-se_assembly");
+
+		# extract the backbone for second assembly pass
+                &create_manifest($currentiteration,$strainname, $refname, $miramode, $trim_off, $platform_settings, $shme, $paired, $trimoverhang, "$strainname-readpool-it$currentiteration.fastq", "backbone_it$currentiteration\_$refname-pe.fna", $redirect_temp, $NFS_warn_only);
+
+                # running MIRA
+                print "\nre-running $miramode assembly using MIRA\n\n";
+                @output = qx($mira manifest.conf );
+
+                $exit = $? >> 8;
+                unless (!$noshow){
+                        print "@output\n";
+                }
+                unless ($exit == 0){
+                        if (!$noshow){
+                                print "@output\n";
+                        }
+                        print "\nMIRA seems to have failed - see detailed output above\n";
+                        exit;
+                }
+
+                if ($redirect_temp) {
+                        &fetch_from_tmp($strainname."-pe", $refname);
+                }
+
+		@path = abs_path;
+        	push (@path, "/$strainname-$refname\_assembly/$strainname-$refname\_d_results/$strainname-$refname\_out.maf");
+        	$maf = join("",@path);
+        	unless (-e $maf){
+                	print "maf file is not there \n";
+                	exit;
+        	}
+        }
+
+	
 	
 #	$current_contiglength = &get_contig_length("$strainname-$refname\_assembly/$strainname-$refname\_d_info/$strainname-$refname\_info_contigstats.txt");
 #	$current_number_of_reads = (&get_number_of_reads("$strainname-$refname\_assembly/$strainname-$refname\_d_info/$strainname-$refname\_info_contigstats.txt") - 1);
@@ -398,7 +425,7 @@ foreach (@iteration){
 	PROOFREAD:
 #	if (($proofreading) && ($currentiteration >= 1)){
 	if ($proofreading){
-		print "proofreading option is currently disabled in this beta version of MITObim 1.7 - sorry for the inconvenience!\n\n";
+		print "proofreading option is currently disabled in this version of MITObim - sorry for the inconvenience!\n\n";
 		exit;
 	}
 
@@ -428,14 +455,26 @@ foreach (@iteration){
 
 	if ($number_of_reads[-2]){
 		if ($number_of_reads[-2] >= $number_of_reads[-1]){
-			print "\nMITObim has reached a stationary read number after $currentiteration iterations!!\n$cite";
+			print "\nMITObim has reached a stationary read number after $currentiteration iterations!!\n";
+			print "\nFinal assembly result will be written to file: ".abs_path."/$strainname\_$refname-it$currentiteration\_noIUPAC.fasta\n";
+			&extract_backbone($strainname, $refname, $currentiteration, $miraconvert, $platform_settings, $maf, $min_contig_cov, $min_contig_len, $noshow, "$strainname\_$refname-it$currentiteration\_noIUPAC.fasta");
+			&clip_Ns("$strainname\_$refname-it$currentiteration\_noIUPAC.fasta");
+
+			print "\n$cite\n";
 			print strftime("%b %e %H:%M:%S", localtime) . "\n\n";
 			exit;
 		}
 	}
 	chdir ".." or die "Failed to go to parent directory: $!";
 }
-print "\nsuccessfully completed $enditeration iterations with MITObim! " . strftime("%b %e %H:%M:%S", localtime) . "\n$cite";
+print "\nsuccessfully completed $enditeration iterations with MITObim!\n";
+print "\nFinal assembly result will be written to file: ".abs_path."/iteration$enditeration/$strainname\_$refname-it$enditeration\_noIUPAC.fasta\n";
+#$maf = abs_path."/iteration$enditeration/$strainname-$refname\_assembly/$strainname-$refname\_d_results/$strainname-$refname\_out.maf"; 
+&extract_backbone($strainname, $refname, $enditeration, $miraconvert, $platform_settings, $maf, $min_contig_cov, $min_contig_len, 0, "iteration$enditeration/$strainname\_$refname-it$enditeration\_noIUPAC.fasta");
+&clip_Ns("iteration$enditeration/$strainname\_$refname-it$enditeration\_noIUPAC.fasta");
+
+print "\n$cite\n";
+print strftime("%b %e %H:%M:%S", localtime) . "\n\n";
 
 #
 #
@@ -443,6 +482,85 @@ print "\nsuccessfully completed $enditeration iterations with MITObim! " . strft
 #
 #
 #
+
+sub write_debris_readlist{
+        my $filepath = shift;
+        my $outfile = shift;
+        my @array;
+        open (DEBRIS,"<$filepath") or die $!;
+        open (OUT,">$outfile") or die $!;
+        while (<DEBRIS>){
+                unless ($_ =~ /#/){
+                        @array = split /\t/;
+                        print OUT $array[0]."\n";
+                }
+        }
+        close (DEBRIS);
+        close (OUT);
+}
+
+
+sub fetch_from_tmp{
+
+        my $strainname = shift;
+        my $refname = shift;
+        my $tmp_link = readlink("$strainname-$refname\_assembly/$strainname-$refname\_d_tmp");
+        rmtree ("$strainname-$refname\_assembly/$strainname-$refname\_d_tmp") or die $!;
+        mkdir "$strainname-$refname\_assembly/$strainname-$refname\_d_tmp/" or die $1;
+        my @files = glob("$tmp_link/*");
+        for (@files) {
+                move ("$_", "$strainname-$refname\_assembly/$strainname-$refname\_d_tmp/") or die $!;
+        }
+        rmtree ("$tmp_link") or die $!;
+
+}
+
+
+sub extract_backbone{
+
+	my $strainname = shift;
+	my $refname = shift;
+	my $iteration = shift;
+	my $miraconvert = shift;
+	my $platform_settings = shift;
+	my $maf = shift;
+	my $min_contig_cov = shift;
+	my $min_len = shift;
+	my $verbose = shift;
+	my $outfile = shift;
+	my @output;
+	my $cmd;
+
+	if ($iteration<2){
+		$cmd = "$miraconvert -f maf -t fasta -A \"$platform_settings -CO:fnicpst=yes\" $maf tmp"
+	}else{
+		$cmd = "$miraconvert -f maf -t fasta -y $min_contig_cov -x $min_len -A \"$platform_settings -CO:fnicpst=yes\" $maf tmp"
+	}
+
+	@output= qx($cmd);
+	my $exit = $? >> 8;
+	unless (!$verbose){
+		print "\n@output\n";
+	}
+	unless ($exit == 0){
+		if (!$verbose){
+			print "\n$cmd\n\n@output\n";
+		}
+		print "\nmiraconvert seems to have failed - see detailed output above\n";
+		exit;
+	}
+
+	open(FH1,"<tmp_$strainname.unpadded.fasta") or die "$!\nIs the sampleID identical to the one used in the previous assembly iteration / intial MIRA assembly ?\n";
+	open(FH2,">$outfile") or die $!;
+	while (<FH1>) {
+		$_ =~ s/x/N/g;
+		print FH2 $_; 
+	}
+	close(FH1);
+	close(FH2);
+	unlink glob ("tmp*");
+
+}
 
 sub set_platform{
 	my @platforms = ('solexa', '454', 'iontorrent', 'pacbio');
@@ -900,14 +1018,14 @@ sub finalize_sequence{
 }
 
 sub create_manifest {
-	my ($iter, $sampleID, $refID, $mmode, $trim, $platform, $solexa_missmatches, $pair, $overhang, $reads, $ref, $redirect, $NFS_warn);
+	my ($iter, $sampleID, $refID, $mmode, $trim, $platform, $solexa_mismatches, $pair, $overhang, $reads, $ref, $redirect, $NFS_warn);
 	$iter = $_[0];
 	$sampleID = $_[1];
 	$refID = $_[2];
 	$mmode = $_[3];
 	$trim = $_[4];
 	$platform = $_[5];
-	$solexa_missmatches = $_[6];
+	$solexa_mismatches = $_[6];
 	$pair = $_[7];
 	$overhang = $_[8];
 	$reads = $_[9];
@@ -922,7 +1040,7 @@ sub create_manifest {
 	open (MANIFEST,">manifest.conf") or die $!;
 	print MANIFEST "#manifest file for iteration $iter created by MITObim\n\nproject = $sampleID-$refID
 	\njob = genome,$mmode,accurate
-	\nparameters = -NW:mrnl=0:cac=warn$NFS_warn -AS:nop=1 $redirect $overhang $platform $trim -CO:msr=no $solexa_missmatches\n";
+	\nparameters = -NW:mrnl=0:cac=warn$NFS_warn -AS:nop=1 $redirect $overhang $platform $trim -CO:msr=no $solexa_mismatches\n";
 	my @technology = split("_",$platform);
 	#-notraceinfo -
 	if ($mmode eq "mapping"){
@@ -948,8 +1066,52 @@ sub clean {
         }
 }
 
+sub clip_Ns{
+	
+	my $file = shift;
+        my @header;
+	my $header_count;
+	my $seq;
+        my (@sequence,@temp_output,@final_output);
+        open(REF,"<$file") or die $!;
+        while(<REF>){
+                chomp;
+                if ($_ =~ /^>/){
+                        push(@header,$_);
+                        $header_count++;
+                        if (@sequence){
+				$seq = join("",@sequence);
+				$seq =~ s/^N+//g; #remove all Ns from the beginning of the sequence
+                                $seq =~ s/N+$//g; #remove all Ns from the end of the sequence
+
+				push(@final_output,$header[-2]);
+				push(@final_output,$seq);
+                        }
+                        undef @sequence;
+                }elsif ($_ =~ /[a-zA-Z]/){
+#                       print "found sequence:\n$_\n";
+                        push(@sequence,$_);
+                }
+        }
+	$seq = join("",@sequence);
+	$seq =~ s/^N+//g; #remove all Ns from the beginning of the sequence
+        $seq =~ s/N+$//g; #remove all Ns from the end of the sequence
+
+	push(@final_output,$header[-1]);
+	push(@final_output,$seq);
+
+	close REF;
+        open (OUT,">$file") or die $!;
+        for(@final_output){
+                print OUT "$_\n";
+        }
+        close OUT;
+
+}
+
 sub remove_unmapped_contigs{
 	my $file = shift;
+	my $min_len = shift;
 	my $out = shift;
 	my ($head, $seq,$length);
 	my @split;
@@ -962,21 +1124,35 @@ sub remove_unmapped_contigs{
 		}else {
 			if ($_ =~ /X/){
 				$dropped++;
-				print "drop:\n$head\n$_\n";
+				print "contig $head -> drop - no reads mapped\n" #\n$_\n";
 			}else{
 				$length=length($_);
 				$_ =~ s/^N+//g;	#remove all Ns from the beginning of the sequence
 				$_ =~ s/N+$//g;	#remove all Ns from the end of the sequence
-				if ($length != length($_)){
-					$trim++;
+				if (length($_) < $min_len){
+					$dropped++;
+					print "contig $head -> drop - too short\n";
+					next;
+				}else{
+					if ($length != length($_)){
+						$trim++;
+						print "contig $head -> trimm Ns off end(s)\n"
+					}
 				}
-				@split=split(/N{3,}/);	#split at every occurance of 3 or more Ns
-			if (@split > 1){
-					print "contig $head has been split into ".scalar @split." sub-contigs\n";
+
+				@split=split(/N{5,}/);	#split at every occurance of 3 or more Ns
+				if (@split > 1){
+					print "contig $head -> split into ".scalar @split." sub-contigs\n";
 					$split++;
 					for (my $i=0; $i<@split; $i++){
 #						print "$head\_$i\n$split[$i]\n";
-						$seq.="$head\_$i\n$split[$i]\n";
+						if (length($split[$i]) < $min_len){
+							$dropped++;
+							print "contig $head\_$i -> drop - too short\n";
+							next;
+						}else{
+							$seq.="$head\_$i\n$split[$i]\n";
+						}
 					}
 				}else{
 #					print "$head\n$_\n";
@@ -986,24 +1162,28 @@ sub remove_unmapped_contigs{
 		}
 	}		
 	close FASTA;
-	if (($dropped) || ($split) || ($trim)){
-		print "creating backup of $out before changing it\n";
-		copy $out,$file;
-		open (OUT,">$out") or die $!."\ncould not open $out for writing\n";
-		print OUT "$seq\n";
-		close OUT;
-	}
-
-	if ($dropped){
-		print "\nremoved $dropped contigs from baitfile because they did not receive any hits\n";
-	}else{
-		print "\nno need to remove any sequences from the baitfile\n";
+	if (!$dropped){
+		print "\nno need to drop any contigs";
 	}
 
 	if (!$split){
-		print "\nno need to split any contigs\n";
+		print "\nno need to split any contigs";
 	}
-	if ($trim){
-		print "\n$trim contigs had N's trimmed off their ends\n";
+
+	if (!$trim){
+		print "\nno trimming of Ns needed";
 	}
+	print "\n";
+	if (($dropped) || ($split) || ($trim)){
+		print "\nwriting backup of original file to '".abs_path."/baitfile_backup.fasta' before making changes to baits\n";
+		copy $out,$file;
+		open (OUT,">$out") or die $!."\ncould not open $out for writing\n";
+		if ($seq){
+			print OUT "$seq\n";
+		}else{
+			print "\nno valid seeds left after filtering\n"
+		}
+		close OUT;
+	}
+
 }
