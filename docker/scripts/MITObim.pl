@@ -1,7 +1,7 @@
 #! /usr/bin/perl
 #
 # MITObim - mitochondrial baiting and iterative mapping
-# wrapper script version 1.8
+# wrapper script version 1.9
 # Author: Christoph Hahn, 2012-2017
 # christoph.hahn@uni-graz.at
 
@@ -31,7 +31,7 @@ my ($mirapath, $mira, $miraconvert, $mirabait) = ("", "mira", "miraconvert", "mi
 my (@reads, @output, @path, @current_contig_stats, @contiglengths, @number_of_reads, @number_of_contigs);
 my %hash;
 my $PROGRAM = "\nMITObim - mitochondrial baiting and iterative mapping\n";
-my $VERSION = "version 1.8\n";
+my $VERSION = "version 1.9\n";
 my $AUTHOR = "author: Christoph Hahn, (c) 2012-2017\n";
 my $cite = "\nif you found MITObim useful, please cite:
 Hahn C, Bachmann L and Chevreux B. (2013) Reconstructing mitochondrial genomes directly from genomic next-generation sequencing reads -
