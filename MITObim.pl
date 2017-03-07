@@ -362,7 +362,7 @@ foreach (@iteration){
 	if ($redirect_temp) {
 		&fetch_from_tmp($strainname, $refname);
 	}
-	
+
 	@path = abs_path;
         push (@path, "/$strainname-$refname\_assembly/$strainname-$refname\_d_results/$strainname-$refname\_out.maf");
         $maf = join("",@path);
@@ -370,6 +370,48 @@ foreach (@iteration){
                 print "maf file is not there \n";
                 exit;
         }
+
+	if (($paired) && ($miramode eq "mapping")){ # && ($currentiteration >= 1)){
+
+                print "preparing to re-assemble using previously unused paired reads\n";
+                &extract_backbone($strainname, $refname, $currentiteration, $miraconvert, $platform_settings, $maf, $min_contig_cov, $min_contig_len, $noshow, "backbone_it$currentiteration\_$refname-pe.fna");
+		# cleanup - rename initial assembly data
+                move ("manifest.conf", "manifest.se.conf") or die $!;
+                move ("$strainname-$refname\_assembly", "$strainname-$refname-se_assembly");
+
+		# extract the backbone for second assembly pass
+                &create_manifest($currentiteration,$strainname, $refname, $miramode, $trim_off, $platform_settings, $shme, $paired, $trimoverhang, "$strainname-readpool-it$currentiteration.fastq", "backbone_it$currentiteration\_$refname-pe.fna", $redirect_temp, $NFS_warn_only);
+
+                # running MIRA
+                print "\nre-running $miramode assembly using MIRA\n\n";
+                @output = qx($mira manifest.conf );
+
+                $exit = $? >> 8;
+                unless (!$noshow){
+                        print "@output\n";
+                }
+                unless ($exit == 0){
+                        if (!$noshow){
+                                print "@output\n";
+                        }
+                        print "\nMIRA seems to have failed - see detailed output above\n";
+                        exit;
+                }
+
+                if ($redirect_temp) {
+                        &fetch_from_tmp($strainname."-pe", $refname);
+                }
+
+		@path = abs_path;
+        	push (@path, "/$strainname-$refname\_assembly/$strainname-$refname\_d_results/$strainname-$refname\_out.maf");
+        	$maf = join("",@path);
+        	unless (-e $maf){
+                	print "maf file is not there \n";
+                	exit;
+        	}
+        }
+
+	
 	
 #	$current_contiglength = &get_contig_length("$strainname-$refname\_assembly/$strainname-$refname\_d_info/$strainname-$refname\_info_contigstats.txt");
 #	$current_number_of_reads = (&get_number_of_reads("$strainname-$refname\_assembly/$strainname-$refname\_d_info/$strainname-$refname\_info_contigstats.txt") - 1);
@@ -441,6 +483,23 @@ print strftime("%b %e %H:%M:%S", localtime) . "\n\n";
 #
 #
 
+sub write_debris_readlist{
+        my $filepath = shift;
+        my $outfile = shift;
+        my @array;
+        open (DEBRIS,"<$filepath") or die $!;
+        open (OUT,">$outfile") or die $!;
+        while (<DEBRIS>){
+                unless ($_ =~ /#/){
+                        @array = split /\t/;
+                        print OUT $array[0]."\n";
+                }
+        }
+        close (DEBRIS);
+        close (OUT);
+}
+
+
 sub fetch_from_tmp{
 
         my $strainname = shift;
@@ -470,19 +529,22 @@ sub extract_backbone{
 	my $verbose = shift;
 	my $outfile = shift;
 	my @output;
+	my $cmd;
 
 	if ($iteration<2){
-		@output= qx($miraconvert -f maf -t fasta -A "$platform_settings -CO:fnicpst=yes" $maf tmp);
+		$cmd = "$miraconvert -f maf -t fasta -A \"$platform_settings -CO:fnicpst=yes\" $maf tmp"
 	}else{
-		@output= qx($miraconvert -f maf -t fasta -y $min_contig_cov -x $min_len -A "$platform_settings -CO:fnicpst=yes" $maf tmp);
+		$cmd = "$miraconvert -f maf -t fasta -y $min_contig_cov -x $min_len -A \"$platform_settings -CO:fnicpst=yes\" $maf tmp"
 	}
+
+	@output= qx($cmd);
 	my $exit = $? >> 8;
 	unless (!$verbose){
 		print "\n@output\n";
 	}
 	unless ($exit == 0){
 		if (!$verbose){
-			print "\n@output\n";
+			print "\n$cmd\n\n@output\n";
 		}
 		print "\nmiraconvert seems to have failed - see detailed output above\n";
 		exit;
