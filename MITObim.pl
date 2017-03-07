@@ -1092,7 +1092,11 @@ sub remove_unmapped_contigs{
 		print "\nwriting backup of original file to '".abs_path."/baitfile_backup.fasta' before making changes to baits\n";
 		copy $out,$file;
 		open (OUT,">$out") or die $!."\ncould not open $out for writing\n";
-		print OUT "$seq\n";
+		if ($seq){
+			print OUT "$seq\n";
+		}else{
+			print "\nno valid seeds left after filtering\n"
+		}
 		close OUT;
 	}
 

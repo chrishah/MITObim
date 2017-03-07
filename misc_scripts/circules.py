@@ -41,6 +41,13 @@ def write_clipped(seq_header, seq_seq, start, end, prefix):
 	out.write(">test_%s\n%s\n" %(str(l),sequence))
 	out.close()
 
+def roll_over(seq_seq, new_start, prefix):
+
+	print "new start coordinate: %s -> writing sequence to '%s.roll.%s.fasta'\n" %(new_start, prefix, new_start)
+	sequence = seq_seq[new_start-1:]+seq_seq[:new_start-1]
+	out = open(prefix+'.rolled.'+str(new_start)+'.fasta', 'w')
+	out.write(">%s_s%s_l%s\n%s\n" %(prefix, new_start, len(sequence), sequence))
+        out.close()
 
 parser = argparse.ArgumentParser(description=DESCRIPTION, prog='circules.py', 
 	formatter_class=argparse.RawDescriptionHelpFormatter, 
@@ -62,6 +69,9 @@ parser = argparse.ArgumentParser(description=DESCRIPTION, prog='circules.py',
 	# clip sequence at specific clip points
 	circules.py -f test.fasta -c 32,15430
 	
+	# roll circular sequence to new startposition, e.g. 46
+	circules.py -f test.fasta -n 46
+
 	''')
 
 parser.add_argument("-f", "--fasta", help="fasta file containing the sequence to be evaluate.", metavar="<FILE>", action="store")
@@ -72,6 +82,7 @@ parser.add_argument("-c", "--extract_by_coordinates", help="Coordinates for clip
 parser.add_argument("-l", "--extract_by_length", help="expected length (in bp) of circular molecule. If a candidate of length expected (+-length tolerance if specified) is found, sequence will be clipped and written to file 'prefix.circular.fasta'.", type=int,  metavar="<INT>", default='0', action="store")
 parser.add_argument("--length_tolerance_percent", help="percent length tolerance (e.g. 0.1, for 10 %%). Candidate fragments must have a length of 'expected length +/- t * expected length'. Default = 0.", type=float,  metavar="<FLOAT>", default='0', action="store")
 parser.add_argument("--length_tolerance_absolute", help="absolute length tolerance (e.g. 1000). Candidate fragments must have a length of 'expected length +/- tolerance'. Default = 0.", type=int,  metavar="<INT>", default='0', action="store")
+parser.add_argument("-n", "--newstart_roll", help="'roll' a putative ciruclar sequence to a specified new start point. Sequence will be written to file 'prefix.roll.{n}.fasta'.", type=int,  metavar="<INT>", default='0', action="store")
 #parser.add_argument("-r", "--readpool", help="path to fastq reads to be used for evaluating circularity.", type=str, metavar="<FILE>", action="store")
 #parser.add_argument("-v", "--verbose", help="turn verbose output on.", action="store_true")
 parser.add_argument("--version", action="version", version=VERSION) 
@@ -108,6 +119,14 @@ if len(seqs) > 1:
 print "%s\n" %DESCRIPTION
 
 print "\n###########################\n\nProcessing sequence of length %s" %len(seqs[seqs.keys()[0]])
+
+if args.newstart_roll:
+	print "\n####################\n## Result output ##\n####################\n"
+	print "\n'Rolling' circular sequence to new start coordinate .." 
+	roll_over(seqs[seqs.keys()[0]], args.newstart_roll, args.prefix)
+	print ""
+	sys.exit()
+	
 
 if args.extract_by_coordinates:
 	if not ',' in args.extract_by_coordinates:
