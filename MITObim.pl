@@ -15,8 +15,8 @@ use POSIX qw(strftime);
 use POSIX qw(ceil);
 use File::Path 'rmtree';
 
-my $startiteration = 1;
-my $enditeration = 1;
+my $startiteration = 0;
+my $enditeration = 0;
 
 my ($quick, $noshow, $help, $strainname, $paired, $mode, $refname, $readpool, $maf, $proofreading, $readlength, $insertsize, $MM, $trim, $trimoverhang, $k_bait, $clean, $clean_interval, $min_contig_cov, $min_contig_len) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 31, 0, 2, 0, 0);
 my ($miramode, $key, $val, $exit, $current_contiglength, $current_number_of_reads, $current_number_of_contigs);
@@ -70,9 +70,13 @@ my $USAGE = 	"\nusage: ./MITObim.pl <parameters>
 #		--readlength <int>	read length of illumina library, default=150, relevant only for proofreading
 #		--insert <int>		insert size of illumina library, default=300, relevant only for proofreading
 
+
+if (scalar @ARGV < 2){
+	die "$PROGRAM\n$VERSION\n$USAGE";
+}
 my $command = $0;
 for (@ARGV){
-        $command .= " $_";
+       	$command .= " $_";
 }
 
 GetOptions (	"start=i" => \$startiteration,
@@ -111,20 +115,26 @@ exit if $showversion;
 print $AUTHOR; 
 
 print $USAGE and exit if $help;
-print $USAGE and exit if !$readpool;
 unless ($quick){
-        print $USAGE and exit if !$maf;
+        print "$USAGE\n\nYou need to specify a bait, either a maf file from a previous assembly (use '-maf'), or a fasta file (use '--quick')\n" and exit if !$maf;
 }
-print $USAGE and exit if !$refname;
+
+print "$USAGE\n\nPlease specify a name for your reference - use '-ref'\n" and exit if !$refname;
+print "$USAGE\n\nPlease specify a name for your sample - use '-sample' (if resuming make sure you use the same name as in the previous run)\n" and exit if !$strainname;
+print "$USAGE\n\nPlease specify a readpool in fastq format - use '-readpool'\n" and exit if !$readpool;
 
 $readpool=abs_path($readpool);
 unless (-e $readpool){
-	print "Cant find the readpool. Is the path correct?\n";
+	die "Cant find the readpool. Is the path correct?\n";
 }
+
 if ($maf){
 	$maf=abs_path($maf);
 	unless (-e $maf){
-		print "Cant find *.maf file. Is the path correct?\n";
+		die "Cant find *.maf file. Is the path correct?\n";
+	}
+	unless ($startiteration){
+		die "\nPlease specify the startiteration - use '-start'\n"		
 	}
 }
 
@@ -133,18 +143,23 @@ if ($maf){
 if ($quick){
 	$quick=abs_path($quick);
         unless (-e $quick){
-		print "quick option selected but is the path to the file correct?\n";
-		exit 1;
+		die "\nquick option selected but is the path to the file correct?\n";
 	}
 	print "\nquick option selected! -maf option will be ignored (if given)\n";
 	$maf = 0;
-	$startiteration = 0;
+	unless ($startiteration){
+		$startiteration = 0;
+	}
 }
-print $USAGE and exit if ($startiteration > $enditeration);
-unless (((-e $maf)||($quick)) && (-e $readpool)){
-        print "\nAre readpool AND maf/reference files there?\n";
-        exit 1;
+unless ($enditeration){
+	$enditeration = $startiteration;
 }
+
+print "$USAGE\n\nStartiteration cannot be larger than enditeration\n" and exit if ($startiteration > $enditeration);
+if (-d "iteration$startiteration"){
+	die "$USAGE\n\nMITObim refuses to overwrite the existing directory: iteration$startiteration - specify another startiteration ('-start') or clean up first\n\n";
+}
+
 if ($mirapath){
 	if (-e "$mirapath/mira"){
 		print "found executables in the path specified by the user - good!\n";
@@ -235,7 +250,7 @@ my @iteration = ($startiteration .. $enditeration);
 foreach (@iteration){
 	chomp;
 	my $currentiteration = $_;
-	mkdir "iteration$currentiteration" or die "MITObim will not overwrite an existing directory: iteration$currentiteration\n";
+	mkdir "iteration$currentiteration" or die "\nMITObim refuses to overwrite existing directory: iteration$currentiteration - Please clean up before resuming\n\n";
 	chdir "iteration$currentiteration" or die $!;
 	print "\n==============\n";
 	print " ITERATION $currentiteration\n";
@@ -345,14 +360,7 @@ foreach (@iteration){
 	}
 	
 	if ($redirect_temp) {
-		my $tmp_link = readlink("$strainname-$refname\_assembly/$strainname-$refname\_d_tmp");
-		rmtree ("$strainname-$refname\_assembly/$strainname-$refname\_d_tmp") or die $!;
-		mkdir "$strainname-$refname\_assembly/$strainname-$refname\_d_tmp/" or die $1; 
-		my @files = glob("$tmp_link/*");			
-		for (@files) {
-			move ("$_", "$strainname-$refname\_assembly/$strainname-$refname\_d_tmp/") or die $!;
-		}
-		rmtree ("$tmp_link") or die $!;
+		&fetch_from_tmp($strainname, $refname);
 	}
 	
 	@path = abs_path;
@@ -375,7 +383,7 @@ foreach (@iteration){
 	PROOFREAD:
 #	if (($proofreading) && ($currentiteration >= 1)){
 	if ($proofreading){
-		print "proofreading option is currently disabled in this beta version of MITObim 1.7 - sorry for the inconvenience!\n\n";
+		print "proofreading option is currently disabled in this version of MITObim - sorry for the inconvenience!\n\n";
 		exit;
 	}
 
@@ -433,6 +441,22 @@ print strftime("%b %e %H:%M:%S", localtime) . "\n\n";
 #
 #
 
+sub fetch_from_tmp{
+
+        my $strainname = shift;
+        my $refname = shift;
+        my $tmp_link = readlink("$strainname-$refname\_assembly/$strainname-$refname\_d_tmp");
+        rmtree ("$strainname-$refname\_assembly/$strainname-$refname\_d_tmp") or die $!;
+        mkdir "$strainname-$refname\_assembly/$strainname-$refname\_d_tmp/" or die $1;
+        my @files = glob("$tmp_link/*");
+        for (@files) {
+                move ("$_", "$strainname-$refname\_assembly/$strainname-$refname\_d_tmp/") or die $!;
+        }
+        rmtree ("$tmp_link") or die $!;
+
+}
+
+
 sub extract_backbone{
 
 	my $strainname = shift;
@@ -464,7 +488,7 @@ sub extract_backbone{
 		exit;
 	}
 
-	open(FH1,"<tmp_$strainname.unpadded.fasta") or die "$!\nIs the sampleID identical as in the initial MIRA assembly?\n";
+	open(FH1,"<tmp_$strainname.unpadded.fasta") or die "$!\nIs the sampleID identical to the one used in the previous assembly iteration / intial MIRA assembly ?\n";
 	open(FH2,">$outfile") or die $!;
 	while (<FH1>) {
 		$_ =~ s/x/N/g;
