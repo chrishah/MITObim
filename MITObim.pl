@@ -553,7 +553,9 @@ sub extract_backbone{
 	open(FH1,"<tmp_$strainname.unpadded.fasta") or die "$!\nIs the sampleID identical to the one used in the previous assembly iteration / intial MIRA assembly ?\n";
 	open(FH2,">$outfile") or die $!;
 	while (<FH1>) {
-		$_ =~ s/x/N/g;
+		if($_ !~ m/^>/) {
+			$_ =~ s/x/N/g;
+		}
 		print FH2 $_; 
 	}
 	close(FH1);
