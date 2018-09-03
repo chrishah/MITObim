@@ -1,8 +1,8 @@
 #! /usr/bin/perl
 #
 # MITObim - mitochondrial baiting and iterative mapping
-# wrapper script version 1.9
-# Author: Christoph Hahn, 2012-2017
+# wrapper script version 1.9.1
+# Author: Christoph Hahn, 2012-2018
 # christoph.hahn@uni-graz.at
 
 use strict;
@@ -31,8 +31,8 @@ my ($mirapath, $mira, $miraconvert, $mirabait) = ("", "mira", "miraconvert", "mi
 my (@reads, @output, @path, @current_contig_stats, @contiglengths, @number_of_reads, @number_of_contigs);
 my %hash;
 my $PROGRAM = "\nMITObim - mitochondrial baiting and iterative mapping\n";
-my $VERSION = "version 1.9\n";
-my $AUTHOR = "author: Christoph Hahn, (c) 2012-2017\n";
+my $VERSION = "version 1.9.1\n";
+my $AUTHOR = "author: Christoph Hahn, (c) 2012-2018\n";
 my $cite = "\nif you found MITObim useful, please cite:
 Hahn C, Bachmann L and Chevreux B. (2013) Reconstructing mitochondrial genomes directly from genomic next-generation sequencing reads -
 a baiting and iterative mapping approach. Nucl. Acids Res. 41(13):e129. doi: 10.1093/nar/gkt371\n\n";
@@ -456,9 +456,9 @@ foreach (@iteration){
 	if ($number_of_reads[-2]){
 		if ($number_of_reads[-2] >= $number_of_reads[-1]){
 			print "\nMITObim has reached a stationary read number after $currentiteration iterations!!\n";
-			print "\nFinal assembly result will be written to file: ".abs_path."/$strainname\_$refname-it$currentiteration\_noIUPAC.fasta\n";
-			&extract_backbone($strainname, $refname, $currentiteration, $miraconvert, $platform_settings, $maf, $min_contig_cov, $min_contig_len, $noshow, "$strainname\_$refname-it$currentiteration\_noIUPAC.fasta");
-			&clip_Ns("$strainname\_$refname-it$currentiteration\_noIUPAC.fasta");
+			print "\nFinal assembly result will be written to file: ".abs_path."/$strainname-$refname-it$currentiteration\_noIUPAC.fasta\n";
+			&extract_backbone($strainname, $refname, $currentiteration, $miraconvert, $platform_settings, $maf, $min_contig_cov, $min_contig_len, $noshow, "$strainname-$refname-it$currentiteration\_noIUPAC.fasta");
+			&clip_Ns("$strainname-$refname-it$currentiteration\_noIUPAC.fasta");
 
 			print "\n$cite\n";
 			print strftime("%b %e %H:%M:%S", localtime) . "\n\n";
@@ -468,10 +468,10 @@ foreach (@iteration){
 	chdir ".." or die "Failed to go to parent directory: $!";
 }
 print "\nsuccessfully completed $enditeration iterations with MITObim!\n";
-print "\nFinal assembly result will be written to file: ".abs_path."/iteration$enditeration/$strainname\_$refname-it$enditeration\_noIUPAC.fasta\n";
+print "\nFinal assembly result will be written to file: ".abs_path."/iteration$enditeration/$strainname-$refname-it$enditeration\_noIUPAC.fasta\n";
 #$maf = abs_path."/iteration$enditeration/$strainname-$refname\_assembly/$strainname-$refname\_d_results/$strainname-$refname\_out.maf"; 
-&extract_backbone($strainname, $refname, $enditeration, $miraconvert, $platform_settings, $maf, $min_contig_cov, $min_contig_len, 0, "iteration$enditeration/$strainname\_$refname-it$enditeration\_noIUPAC.fasta");
-&clip_Ns("iteration$enditeration/$strainname\_$refname-it$enditeration\_noIUPAC.fasta");
+&extract_backbone($strainname, $refname, $enditeration, $miraconvert, $platform_settings, $maf, $min_contig_cov, $min_contig_len, 0, "iteration$enditeration/$strainname-$refname-it$enditeration\_noIUPAC.fasta");
+&clip_Ns("iteration$enditeration/$strainname-$refname-it$enditeration\_noIUPAC.fasta");
 
 print "\n$cite\n";
 print strftime("%b %e %H:%M:%S", localtime) . "\n\n";

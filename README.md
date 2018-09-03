@@ -6,14 +6,14 @@ MITObim - mitochondrial baiting and iterative mapping
 VERSIONS
 --------
 
-1.9 (stable - relies on MIRA 4.0.2)
+1.9.1 (stable - relies on MIRA 4.0.2)
 This version is archived on Zenodo: [![DOI](https://zenodo.org/badge/6140198.svg)](https://zenodo.org/badge/latestdoi/6140198)
 
 1.6 (stable - relies on MIRA 3.4.1.1)
 
 We recommend to use the latest version but see note below regarding availability of the proofreading algorithm.
 
-Copyright Christoph Hahn 2012-2017
+Copyright Christoph Hahn 2012-2018
 
 CONTACT
 -------
@@ -96,7 +96,7 @@ which should display the usage (NOTE: From MITObim 1.7 onwards the `-strain` fla
 ```
 
 MITObim - mitochondrial baiting and iterative mapping
-version 1.9
+version 1.9.1
 
 usage: ./MITObim.pl <parameters>
 	 	
