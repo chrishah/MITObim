@@ -1,4 +1,4 @@
-#! /usr/bin/perl
+#!/usr/bin/env perl
 #
 # MITObim - mitochondrial baiting and iterative mapping
 # wrapper script version 1.9.1
@@ -71,9 +71,7 @@ my $USAGE = 	"\nusage: ./MITObim.pl <parameters>
 #		--insert <int>		insert size of illumina library, default=300, relevant only for proofreading
 
 
-if (scalar @ARGV < 2){
-	die "$PROGRAM\n$VERSION\n$USAGE";
-}
+
 my $command = $0;
 for (@ARGV){
        	$command .= " $_";

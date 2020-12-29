@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # encoding:utf8
 # authors: Erik Garrison, Sébastien Boisvert
 # modified by github@cypridina on 20151104 to work with MITObim

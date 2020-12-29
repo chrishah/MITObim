@@ -1,4 +1,4 @@
-#! /usr/bin/perl
+#!/usr/bin/env perl
 #
 # script to extract per base coverage info for unpadded
 # assembly result from MIRA wiggle file
